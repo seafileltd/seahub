@@ -4,6 +4,7 @@ import os
 import re
 import urllib
 import urllib2
+import base64
 import uuid
 import logging
 import hashlib
@@ -34,7 +35,7 @@ from django.views.static import serve as django_static_serve
 from seahub.api2.models import Token, TokenV2
 import seahub.settings
 from seahub.settings import SITE_NAME, MEDIA_URL, LOGO_PATH, \
-        MEDIA_ROOT, CUSTOM_LOGO_PATH
+        MEDIA_ROOT, CUSTOM_LOGO_PATH, ENABLE_SHARE_LINK_WATERMARK
 try:
     from seahub.settings import EVENTS_CONFIG_FILE
 except ImportError:
@@ -1074,12 +1075,15 @@ if HAS_OFFICE_CONVERTER:
 
         return decorated
 
-    def delegate_add_office_convert_task(file_id, doctype, raw_path):
+    def delegate_add_office_convert_task(file_id, doctype, raw_path, 
+                                         watermark='', convert_tmp_filename=''):
         url = urljoin(OFFICE_CONVERTOR_ROOT, '/office-convert/internal/add-task/')
         data = urllib.urlencode({
             'file_id': file_id,
             'doctype': doctype,
             'raw_path': raw_path,
+            'watermark': watermark,
+            'convert_tmp_filename': convert_tmp_filename
         })
 
         headers = _office_convert_token_header(file_id)
@@ -1087,9 +1091,9 @@ if HAS_OFFICE_CONVERTER:
 
         return json.loads(ret)
 
-    def delegate_query_office_convert_status(file_id, doctype):
+    def delegate_query_office_convert_status(file_id, doctype, convert_tmp_filename=''):
         url = urljoin(OFFICE_CONVERTOR_ROOT, '/office-convert/internal/status/')
-        url += '?file_id=%s&doctype=%s' % (file_id, doctype)
+        url += '?file_id=%s&doctype=%s&convert_tmp_filename=%s' % (file_id, doctype, convert_tmp_filename)
         headers = _office_convert_token_header(file_id)
         ret = do_urlopen(url, headers=headers).read()
 
@@ -1126,17 +1130,22 @@ if HAS_OFFICE_CONVERTER:
         return resp
 
     @cluster_delegate(delegate_add_office_convert_task)
-    def add_office_convert_task(file_id, doctype, raw_path):
+    def add_office_convert_task(file_id, doctype, raw_path, 
+                                watermark='', convert_tmp_filename=''):
+        if convert_tmp_filename == '':
+            convert_tmp_filename = file_id
         rpc = _get_office_converter_rpc()
-        d = rpc.add_task(file_id, doctype, raw_path)
+        d = rpc.add_task(file_id, doctype, raw_path, watermark, convert_tmp_filename)
         return {
             'exists': False,
         }
 
     @cluster_delegate(delegate_query_office_convert_status)
-    def query_office_convert_status(file_id, doctype):
+    def query_office_convert_status(file_id, doctype, convert_tmp_filename=''):
+        if convert_tmp_filename == '': 
+            convert_tmp_filename = file_id 
         rpc = _get_office_converter_rpc()
-        d = rpc.query_convert_status(file_id, doctype)
+        d = rpc.query_convert_status(file_id, doctype, convert_tmp_filename)
         ret = {}
         if d.error:
             ret['error'] = d.error
@@ -1158,9 +1167,10 @@ if HAS_OFFICE_CONVERTER:
                                    filepath,
                                    document_root=office_out_dir)
 
-    def prepare_converted_html(raw_path, obj_id, doctype, ret_dict):
+    def prepare_converted_html(raw_path, obj_id, doctype, ret_dict, 
+                               watermark='', convert_tmp_filename=''):
         try:
-            add_office_convert_task(obj_id, doctype, raw_path)
+            add_office_convert_task(obj_id, doctype, raw_path, watermark, convert_tmp_filename)
         except:
             logging.exception('failed to add_office_convert_task:')
             return _(u'Internal error')
@@ -1393,3 +1403,8 @@ def get_folder_permission_recursively(username, repo_id, path):
     else:
         return seafile_api.check_permission_by_path(
                 repo_id, path, username)
+
+def get_convert_tmp_filename(file_id, watermark):
+    """encode convert_temp_filename
+    """
+    return file_id + base64.b64encode(watermark)

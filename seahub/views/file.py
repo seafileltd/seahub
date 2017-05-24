@@ -45,7 +45,7 @@ from seahub.wopi.utils import get_wopi_dict
 from seahub.auth.decorators import login_required
 from seahub.base.decorators import repo_passwd_set_required
 from seahub.share.models import FileShare, check_share_link_common
-from seahub.share.decorators import share_link_audit
+from seahub.share.decorators import share_link_audit, share_link_dl_watermark
 from seahub.wiki.utils import get_wiki_dirent
 from seahub.wiki.models import WikiDoesNotExist, WikiPageMissing
 from seahub.utils import render_error, is_org_context, \
@@ -53,10 +53,9 @@ from seahub.utils import render_error, is_org_context, \
     render_permission_error, is_pro_version, is_textual_file, \
     mkstemp, EMPTY_SHA1, HtmlDiff, gen_inner_file_get_url, \
     user_traffic_over_limit, get_file_audit_events_by_path, \
-    generate_file_audit_event_type, FILE_AUDIT_ENABLED, \
-    get_site_scheme_and_netloc, get_conf_text_ext, \
+    generate_file_audit_event_type, FILE_AUDIT_ENABLED, gen_token, \
+    get_site_scheme_and_netloc, get_conf_text_ext, get_convert_tmp_filename, \
     HAS_OFFICE_CONVERTER, FILEEXT_TYPE_MAP
-
 from seahub.utils.ip import get_remote_ip
 from seahub.utils.timeutils import utc_to_local
 from seahub.utils.file_types import (IMAGE, PDF,
@@ -67,6 +66,8 @@ from seahub.utils.http import json_response, int_param, \
 from seahub.utils.file_op import check_file_lock
 from seahub.views import check_folder_permission, \
         get_unencry_rw_repos_by_user
+from seahub.thumbnail.utils import add_text_to_image
+from seahub.base.templatetags.seahub_tags import email2nickname
 
 if HAS_OFFICE_CONVERTER:
     from seahub.utils import (
@@ -76,7 +77,8 @@ if HAS_OFFICE_CONVERTER:
 
 import seahub.settings as settings
 from seahub.settings import FILE_ENCODING_LIST, FILE_PREVIEW_MAX_SIZE, \
-    FILE_ENCODING_TRY_LIST, MEDIA_URL
+    FILE_ENCODING_TRY_LIST, USE_PDFJS, MEDIA_URL, ENABLE_SHARE_LINK_WATERMARK, \
+    WATERMARK_PATH
 
 try:
     from seahub.settings import ENABLE_OFFICE_WEB_APP
@@ -244,6 +246,21 @@ def handle_document(raw_path, obj_id, fileext, ret_dict):
 
 def handle_spreadsheet(raw_path, obj_id, fileext, ret_dict):
     handle_document(raw_path, obj_id, fileext, ret_dict)
+
+def handle_pdf(raw_path, obj_id, fileext, ret_dict, watermark=''):
+    if USE_PDFJS:
+        # use pdfjs to preview PDF
+        pass
+    elif HAS_OFFICE_CONVERTER:
+        convert_tmp_filename = get_convert_tmp_filename(obj_id, watermark)
+        # use pdf2htmlEX to prefiew PDF
+        err = prepare_converted_html(raw_path, obj_id, fileext, ret_dict,
+                                    watermark, convert_tmp_filename)
+        # populate return value dict
+        ret_dict['err'] = err
+    else:
+        # can't preview PDF
+        ret_dict['filetype'] = 'Unknown'
 
 def convert_md_link(file_content, repo_id, username):
     def repl(matchobj):
@@ -805,6 +822,7 @@ def _download_file_from_share_link(request, fileshare):
     return HttpResponseRedirect(gen_file_get_url(dl_token, filename))
 
 @share_link_audit
+@share_link_dl_watermark
 def view_shared_file(request, fileshare):
     """
     View file via shared link.
@@ -847,14 +865,12 @@ def view_shared_file(request, fileshare):
         return _download_file_from_share_link(request, fileshare)
 
     access_token = seafile_api.get_fileserver_access_token(repo.id,
-            obj_id, 'view', '', use_onetime=False)
-
+        obj_id, 'view', '', use_onetime=False)
     if not access_token:
         return render_error(request, _(u'Unable to view file'))
 
-
     raw_path = gen_file_get_url(access_token, filename)
-    if request.GET.get('raw', '') == '1':
+    if not ENABLE_SHARE_LINK_WATERMARK and request.GET.get('raw', '') == '1':
         if fileshare.get_permissions()['can_download'] is False:
             raise Http404
 
@@ -888,6 +904,11 @@ def view_shared_file(request, fileshare):
             handle_document(inner_path, obj_id, fileext, ret_dict)
         elif filetype == SPREADSHEET:
             handle_spreadsheet(inner_path, obj_id, fileext, ret_dict)
+        elif filetype == PDF:
+            watermark = ''
+            if ENABLE_SHARE_LINK_WATERMARK:
+                watermark = email2nickname(shared_by) + '\t' + shared_by 
+            handle_pdf(inner_path, obj_id, fileext, ret_dict, watermark)
     else:
         ret_dict['err'] = err_msg
 
@@ -1499,6 +1520,8 @@ def office_convert_add_task(request):
         file_id = request.POST.get('file_id')
         doctype = request.POST.get('doctype')
         raw_path = request.POST.get('raw_path')
+        watermark = request.POST.get('watermark')
+        convert_tmp_filename = request.POST.get('convert_tmp_filename')
     except KeyError:
         return HttpResponseBadRequest('invalid params')
 
@@ -1508,7 +1531,9 @@ def office_convert_add_task(request):
     if len(file_id) != 40:
         return HttpResponseBadRequest('invalid params')
 
-    return add_office_convert_task(file_id, doctype, raw_path, internal=True)
+    return add_office_convert_task(file_id, doctype, raw_path, internal=True,
+                                   watermark=watermark,
+                                   convert_tmp_filename=convert_tmp_filename)
 
 def _check_office_convert_perm(request, repo_id, path, ret):
     token = request.GET.get('token', '')
@@ -1569,6 +1594,7 @@ def _office_convert_get_file_id(request, repo_id=None, commit_id=None, path=None
 
 @json_response
 def office_convert_query_status(request, cluster_internal=False):
+
     if not cluster_internal and not request.is_ajax():
         raise Http404
 
@@ -1578,9 +1604,22 @@ def office_convert_query_status(request, cluster_internal=False):
     else:
         file_id = _office_convert_get_file_id(request)
 
+    convert_tmp_filename = request.GET.get('convert_tmp_filename', None)
+
     ret = {'success': False}
     try:
-        ret = query_office_convert_status(file_id, doctype, cluster_internal=cluster_internal)
+        if ENABLE_SHARE_LINK_WATERMARK:
+            shared_token = request.GET.get('shared_token', '')
+            fileshare = FileShare.objects.get_valid_file_link_by_token(shared_token)
+            if not fileshare or not ENABLE_SHARE_LINK_WATERMARK:
+                ret = query_office_convert_status(file_id, doctype, cluster_internal=cluster_internal)
+            else:
+                if not convert_tmp_filename:
+                    watermark = email2nickname(fileshare.username) + '\t' + fileshare.username
+                    convert_tmp_filename = get_convert_tmp_filename(file_id, watermark)
+                ret = query_office_convert_status(file_id, doctype, convert_tmp_filename, cluster_internal=cluster_internal)
+        else:
+            ret = query_office_convert_status(file_id, doctype, cluster_internal=cluster_internal)
     except Exception, e:
         logging.exception('failed to call query_office_convert_status')
         ret['error'] = str(e)
@@ -1604,6 +1643,13 @@ def office_convert_get_page(request, repo_id, commit_id, path, filename, cluster
         file_id = _office_convert_get_file_id_internal(request)
     else:
         file_id = _office_convert_get_file_id(request, repo_id, commit_id, path)
+
+    shared_token = request.GET.get('shared_token')
+    if ENABLE_SHARE_LINK_WATERMARK and shared_token:
+        fileshare = FileShare.objects.get_valid_file_link_by_token(shared_token)
+        if fileshare:
+            watermark = email2nickname(fileshare.username) + '\t' + fileshare.username
+            file_id = get_convert_tmp_filename(file_id, watermark)
 
     if filename.endswith('.pdf'):
         filename = "{0}.pdf".format(file_id)
