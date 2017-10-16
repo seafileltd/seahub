@@ -27,6 +27,8 @@ from seahub.api2.endpoints.search_group import SearchGroup
 from seahub.api2.endpoints.share_links import ShareLinks, ShareLink
 from seahub.api2.endpoints.shared_folders import SharedFolders
 from seahub.api2.endpoints.shared_repos import SharedRepos, SharedRepo
+from seahub.api2.endpoints.alpha_box_repos import AlphaBoxRepos, \
+        AlphaBoxReposCount
 from seahub.api2.endpoints.upload_links import UploadLinks, UploadLink
 from seahub.api2.endpoints.repos_batch import ReposBatchView, \
         ReposBatchCopyDirView, ReposBatchCreateDirView
@@ -361,6 +363,8 @@ urlpatterns = patterns(
     ## admin::organizations
     url(r'^api/v2.1/admin/organizations/(?P<org_id>\d+)/users/$', AdminOrgUsers.as_view(), name='api-v2.1-admin-org-users'),
     url(r'^api/v2.1/admin/organizations/(?P<org_id>\d+)/users/(?P<email>[^/]+)/$', AdminOrgUser.as_view(), name='api-v2.1-admin-org-user'),
+    url(r'^api/v2.1/alpha-box-repos/$', AlphaBoxRepos.as_view(), name='api-v2.1-alpha-box-repos'),
+    url(r'^api/v2.1/alpha-box-repos/count/$', AlphaBoxReposCount.as_view(), name='api-v2.1-alpha-box-repos-count'),
 
     ## admin::logo
     url(r'^api/v2.1/admin/logo/$', AdminLogo.as_view(), name='api-v2.1-admin-logo'),
