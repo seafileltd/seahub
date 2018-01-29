@@ -69,6 +69,11 @@ class Fixtures(Exam):
                                 username='test@test.com')
 
     @fixture
+    def image(self):
+        return self.create_image(origin_file_path='media/img/seafile-logo.png',
+                                 image_file_name='image_test.png')
+
+    @fixture
     def folder(self):
         return self.create_folder(repo_id=self.repo.id,
                                   parent_dir='/',
@@ -152,6 +157,26 @@ class Fixtures(Exam):
     def create_file(self, **kwargs):
         seafile_api.post_empty_file(**kwargs)
         return kwargs['parent_dir'] + kwargs['filename']
+
+    def create_image(self, origin_file_path, image_file_name):
+        seafile_api.post_empty_file(self.repo.id,
+                                    '/',
+                                    filename=image_file_name,
+                                    username=self.user.username)
+
+        with open(origin_file_path, 'rb') as f:
+            f = f.read()
+        fd, tmp_file = mkstemp()
+        try:
+            bytesWritten = os.write(fd, f)
+        except:
+            bytesWritten = -1
+        finally:
+            os.close(fd)
+        assert bytesWritten > 0
+        seafile_api.put_file(self.repo.id, tmp_file, '/', image_file_name,
+                             self.user.username, None)
+        return image_file_name
 
     def create_file_with_content(self, file_name, parent_dir='/', content='abc',
                                  username=''):
