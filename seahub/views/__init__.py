@@ -444,6 +444,8 @@ def repo_online_gc(request, repo_id):
         return HttpResponseRedirect(next)
 
     day = int(request.POST.get('day'))
+    print '------'
+    print day
     try:
         seafile_api.clean_up_repo_history(repo.id, day)
     except SearpcError as e:
