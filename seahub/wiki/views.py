@@ -29,6 +29,26 @@ from seahub.views import check_folder_permission
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
 
+@login_required
+@user_mods_check
+def wiki_list(request):
+
+    username = request.user.username
+
+    if request.cloud_mode and request.user.org is not None:
+        org_id = request.user.org.org_id
+        joined_groups = seaserv.get_org_groups_by_user(org_id, username)
+    else:
+        joined_groups = seaserv.get_personal_groups_by_user(username)
+
+    if joined_groups:
+        joined_groups.sort(lambda x, y: cmp(x.group_name.lower(), y.group_name.lower()))
+
+    return render_to_response("wiki/wiki_list.html", {
+	"grps": joined_groups,
+	}, context_instance=RequestContext(request))
+
+
 def slug(request, slug, page_name="home"):
     """Show wiki page.
     """
