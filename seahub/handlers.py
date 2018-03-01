@@ -11,6 +11,9 @@ if not hasattr(settings, 'EVENTS_CONFIG_FILE'):
 
     def repo_deleted_cb(sender, **kwargs):
         pass
+
+    def repo_trash_deleted_cb(sender, **kwargs):
+        pass
 else:
 
     import seafevents
@@ -72,6 +75,35 @@ else:
 
         users = usernames
 
+        session = SeafEventsSession()
+        if org_id > 0:
+            seafevents.save_org_user_events (session, org_id, etype, detail, users, None)
+        else:
+            seafevents.save_user_events (session, etype, detail, users, None)
+        session.close()
+
+    def repo_trash_deleted_cb(sender, **kwargs):
+        """When a repo trash is deleted, the operator will be recorded.
+        """
+        org_id = kwargs['org_id']
+        operator = kwargs['operator']
+        repo_id = kwargs['repo_id']
+        days = kwargs.get('days', None)
+        filepath = kwargs.get('filepath', None)
+        etype = 'repo-trash-deleted'
+
+        detail = {
+            'repo_id': repo_id
+        }
+        if days is not None:
+            detail['days'] = days
+        elif filepath is not None:
+            detail['filepath'] = filepath
+        else:
+            logging.error('Unknown event input')
+            return
+
+        users = [operator]
         session = SeafEventsSession()
         if org_id > 0:
             seafevents.save_org_user_events (session, org_id, etype, detail, users, None)

@@ -604,6 +604,16 @@ if EVENTS_CONFIG_FILE:
                             repo.id, username)
                     ev.repo = repo
                     ev.commit = seaserv.get_commit(repo.id, repo.version, ev.commit_id)
+                if ev.etype == 'repo-trash-deleted':
+                    repo = seafile_api.get_repo(ev.repo_id)
+                    if not repo:
+                        # delete the update event for repo which has been deleted
+                        seafevents.delete_event(ev_session, ev.uuid)
+                        continue
+                    if repo.encrypted:
+                        repo.password_set = seafile_api.is_password_set(
+                            repo.id, username)
+                    ev.repo = repo
 
                 valid_events.append(ev)
                 if len(valid_events) == limit:

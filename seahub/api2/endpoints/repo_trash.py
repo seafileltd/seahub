@@ -13,6 +13,7 @@ from seahub.api2.throttling import UserRateThrottle
 from seahub.api2.authentication import TokenAuthentication
 from seahub.api2.utils import api_error
 
+from seahub.signals import repo_trash_deleted
 from seahub.utils import normalize_file_path
 from seahub.utils.timeutils import timestamp_to_isoformat_timestr
 from seahub.utils.repo import get_repo_owner
@@ -179,6 +180,8 @@ class RepoTrash(APIView):
 
         try:
             seafile_api.clean_up_repo_history(repo_id, keep_days)
+            org_id = None if not request.user.org else request.user.org.org_id
+            repo_trash_deleted.send(sender=None, org_id=org_id, operator=username, repo_id=repo_id, days=keep_days, filepath=None)
         except Exception as e:
             logger.error(e)
             error_msg = 'Internal Server Error'
@@ -225,6 +228,8 @@ class RepoTrashItem(APIView):
 
         try:
             TrashCleanedItems.objects.add_item(repo_id, path)
+            org_id = None if not request.user.org else request.user.org.org_id
+            repo_trash_deleted.send(sender=None, org_id=org_id, operator=username, repo_id=repo_id, days=None, filepath=path)
         except Exception as e:
             logger.error(e)
             error_msg = 'Internal Server Error'

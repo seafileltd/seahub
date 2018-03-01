@@ -30,6 +30,7 @@ from django.template.loader import render_to_string
 from django.template.defaultfilters import filesizeformat
 from django.shortcuts import render_to_response
 from django.utils import timezone
+from django.utils.html import escape
 from django.utils.translation import ugettext as _
 
 from .throttling import ScopedRateThrottle, AnonRateThrottle, UserRateThrottle
@@ -3835,6 +3836,27 @@ class EventsView(APIView):
                 d['converted_cmmt_desc'] = translate_commit_desc_escape(convert_cmmt_desc_link(e.commit))
                 d['more_files'] = e.commit.more_files
                 d['repo_encrypted'] = e.repo.encrypted
+            elif e.etype == 'repo-trash-deleted':
+                d['repo_id'] = e.repo_id
+                d['author'] = e.username
+                epoch = datetime.datetime(1970, 1, 1)
+                local = utc_to_local(e.timestamp)
+                time_diff = local - epoch
+                d['time'] = time_diff.seconds + (time_diff.days * 24 * 3600)
+                d['days'] = e.days if hasattr(e, 'days') else None
+                d['filepath'] = e.filepath if hasattr(e, 'filepath') else None
+                d['repo_name'] = e.repo.name
+                d['desc'] = ""
+                if d['days'] == 0:
+                    d['desc'] = escape(_(u'Remove all the data from the trash.'))
+                elif d['days'] > 0:
+                    d['desc'] = escape(_(u'Remove the trash %s days ago data.') % d['days'])
+                elif d['filepath']:
+                    health_desc = escape(_(u'Remove %s file from the trash.') % (d['filepath']))
+                    # add double quotes to the filename
+                    sp_desc = health_desc.split(' ')
+                    sp_desc[1] = '"' + sp_desc[1] + '"'
+                    d['desc'] = ' '.join(sp_desc)
             else:
                 d['repo_id'] = e.repo_id
                 d['repo_name'] = e.repo_name
