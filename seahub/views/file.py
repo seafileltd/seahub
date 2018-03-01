@@ -18,6 +18,7 @@ import mimetypes
 import urlparse
 import datetime
 import hashlib
+import jwt
 
 from django.core import signing
 from django.core.cache import cache
@@ -41,6 +42,7 @@ from seaserv import get_repo, send_message, get_commits, \
     seafserv_threaded_rpc
 from pysearpc import SearpcError
 
+from seahub.profile.models import Profile
 from seahub.wopi.utils import get_wopi_dict
 from seahub.auth.decorators import login_required
 from seahub.base.decorators import repo_passwd_set_required
@@ -101,7 +103,8 @@ except ImportError:
 try:
     from seahub.settings import ENABLE_ONLYOFFICE
     from seahub.onlyoffice.settings import ONLYOFFICE_APIJS_URL, \
-            ONLYOFFICE_FILE_EXTENSION, ONLYOFFICE_EDIT_FILE_EXTENSION
+            ONLYOFFICE_FILE_EXTENSION, ONLYOFFICE_EDIT_FILE_EXTENSION, \
+            ONLYOFFICE_SERVER_SECRET
 except ImportError:
     ENABLE_ONLYOFFICE = False
 
@@ -507,6 +510,36 @@ def _file_view(request, repo_id, path):
         else:
             can_edit = False
 
+        if ONLYOFFICE_SERVER_SECRET:
+            jwt_encode_data = {
+                "document": {
+                    "fileType":  fileext,
+                    "key":  doc_key,
+                    "title": doc_title,
+                    "url": doc_url,
+                    "permissions": {
+                         "download": "true",
+                         "edit": "true" if can_edit else "false",
+                         "print": "true",
+                         "review": "true"
+                    },
+                },
+                "documentType": document_type,
+                "editorConfig": {
+                    "callbackUrl": get_site_scheme_and_netloc().rstrip('/') + reverse('onlyoffice_editor_callback'),
+                    "lang": Profile.objects.get_user_language(username),
+                    "mode": "edit" if can_edit else "view",
+                    "user": {
+                         "name": "lian"
+                    }
+                }
+            }
+            from pprint import pprint
+            pprint(jwt_encode_data)
+            token = jwt.encode(jwt_encode_data, ONLYOFFICE_SERVER_SECRET)
+        else:
+            token = ""
+
         send_file_access_msg(request, repo, path, 'web')
         return render_to_response('onlyoffice/view_file_via_onlyoffice.html', {
             'ONLYOFFICE_APIJS_URL': ONLYOFFICE_APIJS_URL,
@@ -518,6 +551,7 @@ def _file_view(request, repo_id, path):
             'callback_url': get_site_scheme_and_netloc().rstrip('/') + reverse('onlyoffice_editor_callback'),
             'can_edit': can_edit,
             'username': username,
+            'token': token,
         }, context_instance=RequestContext(request))
 
     # check if the user is the owner or not, for 'private share'
