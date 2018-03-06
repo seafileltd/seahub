@@ -86,6 +86,8 @@
 
             <a class="sf-btn-group-btn sf-btn-link op-icon sf2-icon-download" href="?dl=1" id="download" title="{% trans "Download"%}"></a>
 
+            <button id="review" class="sf-btn-group-btn op-icon sf2-icon-msgs" title="{% trans "Review" %}"></button>
+
             <button id="discuss" class="sf-btn-group-btn sf-btn-group-btn-last op-icon sf2-icon-msgs" title="{% trans "Comment" %}"></button>
         </div>
 
@@ -309,6 +311,37 @@ $(window).on('load', function() {
 });
 {% endif %}
 
+// start a review
+$('#review').on('click', function() {
+    $.ajax({
+        url: '{% url 'api-v2.1-reviews' %}',
+        type: 'POST',
+        dataType: 'json',
+        cache: false,
+        beforeSend: prepareCSRFToken,
+        data: {
+            'repo_id': '{{ repo.id }}',
+            'path': "{{ path|escapejs }}"
+        },
+        success: function(data) {
+            // turn to an independant review page
+            location.href = '{{SITE_ROOT}}review/' + encodeURIComponent(data.review_id) + '/';
+        },
+        error: function(xhr) {
+            var error_msg;
+            if (xhr.responseText) {
+                try {
+                    error_msg = JSON.parse(xhr.responseText).error_msg;
+                } catch(e) {
+                    error_msg = "{% trans "Error" %}";
+                }
+            } else {
+                error_msg = "{% trans "Please check the network." %}";
+            }
+            feedback(error_msg, 'error');
+        }
+    });
+});
 
 // file discussion
 var fileDiscussions = {
