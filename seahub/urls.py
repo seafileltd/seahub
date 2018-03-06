@@ -205,6 +205,8 @@ urlpatterns = patterns(
     ### Apps ###
     (r'^api2/', include('seahub.api2.urls')),
 
+    (r'^api/v2.1/reviews/', include('seahub.review.urls')),
+
     ## user
     url(r'^api/v2.1/user/$', User.as_view(), name="api-v2.1-user"),
 
