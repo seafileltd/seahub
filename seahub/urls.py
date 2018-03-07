@@ -12,7 +12,7 @@ from seahub.views.sso import *
 from seahub.views.file import view_repo_file, view_history_file, view_trash_file,\
     view_snapshot_file, file_edit, view_shared_file, view_file_via_shared_dir,\
     text_diff, view_raw_file, view_raw_shared_file, \
-    download_file, view_lib_file, file_access
+    download_file, view_lib_file, file_access, file_review
 from seahub.views.repo import repo_history_view, view_shared_dir, \
     view_shared_upload_link
 from notifications.views import notification_list
@@ -166,6 +166,9 @@ urlpatterns = patterns(
     url(r'^d/(?P<token>[a-f0-9]+)/$', view_shared_dir, name='view_shared_dir'),
     url(r'^d/(?P<token>[a-f0-9]+)/files/$', view_file_via_shared_dir, name='view_file_via_shared_dir'),
     url(r'^u/d/(?P<token>[a-f0-9]+)/$', view_shared_upload_link, name='view_shared_upload_link'),
+
+    ### file review ###
+    url(r'^review/(?P<review_id>\d+)/$', file_review, name='file_review'),
 
     ### Misc ###
     url(r'^image-view/(?P<filename>.*)$', image_view, name='image_view'),

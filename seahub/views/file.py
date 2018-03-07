@@ -26,7 +26,7 @@ from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.db.models import F
 from django.http import HttpResponse, Http404, HttpResponseRedirect, HttpResponseBadRequest, HttpResponseForbidden
-from django.shortcuts import render_to_response
+from django.shortcuts import render_to_response, get_object_or_404
 from django.template import RequestContext
 from django.utils.http import urlquote
 from django.utils.encoding import force_bytes
@@ -48,6 +48,8 @@ from seahub.share.models import FileShare, check_share_link_common
 from seahub.share.decorators import share_link_audit
 from seahub.wiki.utils import get_wiki_dirent
 from seahub.wiki.models import WikiDoesNotExist, WikiPageMissing
+from seahub.review.models import Review
+from seahub.api2.endpoints.reviews import get_review_info
 from seahub.utils import render_error, is_org_context, \
     get_file_type_and_ext, gen_file_get_url, gen_file_share_link, \
     render_permission_error, is_pro_version, is_textual_file, \
@@ -641,6 +643,62 @@ def _file_view(request, repo_id, path):
             'img_next': img_next,
             'highlight_keyword': settings.HIGHLIGHT_KEYWORD,
             }, context_instance=RequestContext(request))
+
+
+@login_required
+def file_review(request, review_id):
+
+    review = get_object_or_404(Review, id=review_id)
+
+    # TODO: who can view this page? only reviewer? or ?
+
+    username = request.user.username
+    review_info = get_review_info(review)
+
+    repo_id = review_info["repo_id"]
+    path = review_info["path"]
+
+    # check arguments
+    repo = get_repo(repo_id)
+    if not repo:
+        raise Http404
+
+    obj_id = get_file_id_by_path(repo_id, path)
+    if not obj_id:
+        return render_error(request, _(u'File does not exist'))
+
+    # construct some varibles
+    u_filename = os.path.basename(path)
+    #current_commit = get_commits(repo_id, 0, 1)[0]
+    # get file type and extension
+    filetype, fileext = get_file_type_and_ext(u_filename)
+
+    # Check whether user has permission to view file and get file raw path,
+    # render error page if permission deny.
+    file_perm = seafile_api.check_permission_by_path(repo_id, path, username)
+    if not file_perm:
+        return render_permission_error(request, _(u'Unable to view file'))
+
+    # Get file view raw path, ``user_perm`` is not used anymore.
+    # ***at present(2018.3.6), only pdf & doc files are offered 'review'
+    raw_path, inner_path, user_perm = get_file_view_path_and_perm(
+        request, repo_id, obj_id, path)
+
+    fsize = get_file_size(repo.store_id, repo.version, obj_id)
+    can_preview, err_msg = can_preview_file(u_filename, fsize, repo)
+    if can_preview:
+        if filetype == DOCUMENT:
+            handle_document(inner_path, obj_id, fileext, ret_dict)
+
+    return render_to_response('file_review.html', {
+            'review': review,
+            'repo': repo,
+            'filename': u_filename,
+            'raw_path': raw_path,
+            'err': err_msg,
+            'filetype': filetype,
+            }, context_instance=RequestContext(request))
+
 
 def view_history_file_common(request, repo_id, ret_dict):
     # check arguments
