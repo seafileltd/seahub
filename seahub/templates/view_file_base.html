@@ -56,7 +56,14 @@
             </div>
         </div>
 
-        <div class="sf-btn-group file-view-op">
+        <div class="file-view-op">
+            {% if not repo.encrypted %}
+            {% if filetype == 'PDF' or filetype == 'Document' or filetype == 'Markdown' %}
+            <button id="review" class="btn-white">{% trans "Review" %}</button>
+            {% endif %}
+            {% endif %}
+
+        <div class="sf-btn-group inline-block">
             <a class="sf-btn-group-btn sf-btn-group-btn-first sf-btn-link op-icon sf2-icon-folder" href="{% url 'view_common_lib_dir' repo.id parent_dir|strip_slash %}" title="{% trans "Open parent folder" %}"></a>
 
             {% if can_lock_unlock_file %}
@@ -86,13 +93,8 @@
 
             <a class="sf-btn-group-btn sf-btn-link op-icon sf2-icon-download" href="?dl=1" id="download" title="{% trans "Download"%}"></a>
 
-            {% if not repo.encrypted %}
-            {% if filetype == 'PDF' or filetype == 'Document' %}
-            <button id="review" class="sf-btn-group-btn op-icon sf2-icon-msgs" title="{% trans "Review" %}"></button>
-            {% endif %}
-            {% endif %}
-
             <button id="discuss" class="sf-btn-group-btn sf-btn-group-btn-last op-icon sf2-icon-msgs" title="{% trans "Comment" %}"></button>
+        </div>
         </div>
 
     </div>

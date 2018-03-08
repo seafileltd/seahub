@@ -49,7 +49,7 @@ from seahub.share.decorators import share_link_audit
 from seahub.wiki.utils import get_wiki_dirent
 from seahub.wiki.models import WikiDoesNotExist, WikiPageMissing
 from seahub.review.models import Review
-from seahub.api2.endpoints.reviews import get_review_info
+from seahub.review.utils import get_review_info
 from seahub.utils import render_error, is_org_context, \
     get_file_type_and_ext, gen_file_get_url, gen_file_share_link, \
     render_permission_error, is_pro_version, is_textual_file, \
@@ -650,8 +650,6 @@ def file_review(request, review_id):
 
     review = get_object_or_404(Review, id=review_id)
 
-    # TODO: who can view this page? only reviewer? or ?
-
     username = request.user.username
     review_info = get_review_info(review)
 
@@ -681,13 +679,21 @@ def file_review(request, review_id):
 
     # Get file view raw path, ``user_perm`` is not used anymore.
     # ***at present(2018.3.6), only pdf & doc files are offered 'review'
+    #  markdown is offered. (3.8)
     raw_path, inner_path, user_perm = get_file_view_path_and_perm(
         request, repo_id, obj_id, path)
 
+    ret_dict = {'err': '', 'file_content': '', 'encoding': '', 'file_enc': '',
+                'file_encoding_list': [], 'filetype': filetype}
     fsize = get_file_size(repo.store_id, repo.version, obj_id)
     can_preview, err_msg = can_preview_file(u_filename, fsize, repo)
     if can_preview:
-        if filetype == DOCUMENT:
+        if is_textual_file(file_type=filetype):
+            handle_textual_file(request, filetype, inner_path, ret_dict)
+            if filetype == MARKDOWN:
+                c = ret_dict['file_content']
+                ret_dict['file_content'] = convert_md_link(c, repo_id, username)
+        elif filetype == DOCUMENT:
             handle_document(inner_path, obj_id, fileext, ret_dict)
 
     return render_to_response('file_review.html', {
@@ -697,6 +703,7 @@ def file_review(request, review_id):
             'raw_path': raw_path,
             'err': err_msg,
             'filetype': filetype,
+            'file_content': ret_dict['file_content'],
             }, context_instance=RequestContext(request))
 
 

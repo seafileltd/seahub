@@ -38,10 +38,21 @@
             </h2>
         </div>
 
+        {% if review.status == 'started' %}
+        <p id="status" class="hide"></p>
         <div class="file-view-op">
+            {% if request.user.username == review.reviewer %}
             <button id="cancel-review" class="">{% trans "Cancel Review" %}</button>
             <button id="submit-review" class="">{% trans "Submit Review" %}</button>
+            {% endif %}
         </div>
+        {% endif %}
+        {% if review.status == 'finished' %}
+        <p id="status">{% trans "Status: finished." %}</p>
+        {% endif %}
+        {% if review.status == 'canceled' %}
+        <p id="status">{% trans "Status: canceled." %}</p>
+        {% endif %}
 
     </div>
 
@@ -76,24 +87,27 @@
         <form action="" method="post" class="msg-form">
             <img src="{% avatar_url request.user 64 %}" alt="" width="32" class="avatar-circle fleft" />
             <div class="msg-body">
-                <textarea name="message" placeholder="{% trans "Add a comment..." %}" title="{% trans "Add a comment..." %}" aria-label="{% trans "Add a comment..." %}" class="msg-input"></textarea>
+                <textarea name="message" placeholder="{% trans "Add a comment..." %}" title="{% trans "Add a comment..." %}" aria-label="{% trans "Add a comment..." %}" class="msg-input" <% if (!is_reviewer) { %>disabled="disabled"<% } %>></textarea>
                 <p class="error hide"></p>
+                <% if (is_reviewer) { %>
                 <button type="submit" class="submit msg-submit">{% trans "Submit" %}</button>
+                <% } else { %>
+                <button type="submit" class="submit btn-disabled" disabled="disabled">{% trans "Submit" %}</button>
+                <% } %>
             </div>
         </form>
     </div>
 </script>
 <script type="text/template" id="discussion-tmpl">
 <li class="msg ovhd">
-    <img src="<%= avatar_url %>" alt="" width="32" class="avatar-circle fleft" />
+    <img src="{% avatar_url review.reviewer 64 %}" alt="" width="32" class="avatar-circle fleft" />
     <div class="msg-body">
         <div class="ovhd">
-            <a class="msg-username ellipsis" title="<%- user_name %>" href="<%= user_profile_url %>"><%- user_name %></a>
+            <a class="msg-username ellipsis" title="{{review.reviewer}}" href="<%= user_profile_url %>">{{ review.reviewer|email2nickname }}</a>
             <span class="msg-time" title="<%- time %>"><%- time_from_now %></span>
             <div class="msg-ops fright vh">
-                <a class="msg-op sf2-icon-reply op-icon js-reply-msg" title="{% trans "Reply" %}" aria-label="{% trans "Reply" %}" href="#" data-username="<%- user_name %>"></a>
-                <% if (can_delete_msg) { %>
-                    <a class="msg-op sf2-icon-delete op-icon js-del-msg" title="{% trans "Delete" %}" aria-label="{% trans "Delete" %}" href="#" data-id="<%= id %>"></a>
+                <% if (is_reviewer) { %>
+                    <a class="msg-op sf2-icon-delete op-icon js-del-msg" title="{% trans "Delete" %}" aria-label="{% trans "Delete" %}" href="#" data-id="<%= comment_id %>"></a>
                 <% } %>
             </div>
         </div>
@@ -120,25 +134,54 @@
     var raw_path = "{{ raw_path|escapejs }}";
     {% include 'snippets/pdfjs_file_viewer.html' %}
     {% endif %}
+
+    {% if filetype == 'Markdown' %}
+    {% ifnotequal file_content None %}
+    $('#file-view').html('<div id="md-view" class="article"></div>');
+    var renderer = new marked.Renderer();
+    // remove 'id' attribute for headings
+    renderer.heading = function (text, level) {
+        return '<h' + level + '>' + text + '</h' + level + '>';
+    };
+    marked.setOptions({
+        renderer: renderer,
+        breaks: true, // keep linebreak
+        smartLists: true,
+        sanitize: true // Ignore any HTML that has been input
+    });
+    $('#md-view').html(marked('{{ file_content|escapejs }}')).children(':first').css('margin-top', '0');
+    {% endifnotequal %}
+    {% endif %}
 </script>
 {% endif %}
 <script type="text/javascript">
 
-// start a review
-$('#review').on('click', function() {
+// submit/cancel a review
+$('#submit-review, #cancel-review').on('click', function() {
+    var $btn = $(this);
+    var op = $btn.attr('id').indexOf('submit') != -1 ? 'submit' : 'cancel';
+    var review_status, status_text;
+    if (op == 'submit') {
+        review_status = 'finished';
+        status_text = '{% trans "Status: finished." %}';
+    } else {
+        review_status = 'canceled';
+        status_text = '{% trans "Status: canceled." %}';
+    }
     $.ajax({
-        url: '{% url 'api-v2.1-reviews' %}',
-        type: 'POST',
+        url: '{% url 'api-v2.1-review' review.id %}',
+        type: 'PUT',
         dataType: 'json',
         cache: false,
         beforeSend: prepareCSRFToken,
         data: {
-            'repo_id': '{{ repo.id }}',
-            'path': "{{ path|escapejs }}"
+            'status': review_status
         },
         success: function(data) {
-            // turn to an independant review page
-            location.href = '{{SITE_ROOT}}review/' + encodeURIComponent(data.review_id) + '/';
+            $btn.closest('div').hide();
+            $('#status').html(status_text).show();
+            $('.comments-panel-footer [name="message"]').prop('disabled', true);
+            $('.comments-panel-footer .submit').prop('disabled', true).removeClass('msg-submit');
         },
         error: function(xhr) {
             var error_msg;
@@ -164,6 +207,12 @@ var fileDiscussions = {
 
     init: function() {
         var _this = this;
+
+        var is_reviewer = false; 
+        if ('{{review.reviewer|escapejs}}' == '{{request.user|escapejs}}') {
+            is_reviewer = true; 
+        }
+        this.is_reviewer = is_reviewer;
 
         this.setLocale();
 
@@ -210,7 +259,9 @@ var fileDiscussions = {
     },
 
     render: function () {
-        this.$el.html($(this.tmpl()));
+        this.$el.html($(this.tmpl({
+            'is_reviewer': this.is_reviewer
+        })));
 
         this.$listContainer = $('.file-discussion-list', this.$el);
         this.$emptyTip = $('.no-discussion-tip', this.$el);
@@ -250,8 +301,7 @@ var fileDiscussions = {
             cache: false,
             dataType: 'json',
             success: function(data) {
-                console.log(data);
-                var comments = data.comments;
+                var comments = data;
                 if (comments.length > 0) {
                     $(comments).each(function(index, item) {
                         _this.addOne(item);
@@ -283,7 +333,7 @@ var fileDiscussions = {
         var $submitBtn = $('[type="submit"]', this.$el)
         var msg = $.trim(this.$msgInput.val());
 
-        if (!msg) {
+        if (!this.is_reviewer || !msg) {
             return false;
         }
 
@@ -323,24 +373,17 @@ var fileDiscussions = {
     itemTmpl: _.template($('#discussion-tmpl').html()),
 
     addOne: function(obj) {
-        var can_delete_msg = false;
-        var is_repo_owner = {% if is_repo_owner %}true{% else %}false{% endif %};
-        if (is_repo_owner ||
-            obj.user_email == '{{request.user|escapejs}}') {
-            can_delete_msg = true;
-        }
+        var user_profile_url = '{% url 'user_profile' review.reviewer %}';
 
-        var user_profile_url = '{{SITE_ROOT}}profile/' + encodeURIComponent(obj.user_email) + '/';
-
-        var m = moment(obj.created_at);
+        var m = moment(obj.time);
         var data = $.extend({}, obj, {
-            'content_marked': marked(obj.comment, {
+            'content_marked': marked(obj.content, {
                 breaks: true,
                 sanitize: true
             }),
             'time': m.format('LLLL'),
             'time_from_now': this.util_getRelativeTimeStr(m),
-            'can_delete_msg': can_delete_msg,
+            'is_reviewer': this.is_reviewer,
             'user_profile_url': user_profile_url
         });
 
@@ -364,7 +407,7 @@ var fileDiscussions = {
     delOne: function(item) { // item: {id:, $el:}
         var _this = this;
         $.ajax({
-            url: '{{SITE_ROOT}}api2/repos/{{repo.id}}/file/comments/' + item.id + '/',
+            url: '{{SITE_ROOT}}api2/repos/{{repo.id}}/file/comments/' + item.id + '/', // TODO. api is not offered.
             type: 'delete',
             cache: false,
             beforeSend: prepareCSRFToken,
