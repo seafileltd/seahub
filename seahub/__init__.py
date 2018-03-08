@@ -1,10 +1,11 @@
 # Copyright (c) 2012-2016 Seafile Ltd.
-from signals import repo_created, repo_deleted, repo_trash_deleted
-from handlers import repo_created_cb, repo_deleted_cb, repo_trash_deleted_cb
+from signals import repo_created, repo_deleted, clean_up_repo_history_by_day, clean_up_repo_history_by_file
+from handlers import repo_created_cb, repo_deleted_cb, clean_up_repo_history_by_day_cb, clean_up_repo_history_by_file_cb
 
 repo_created.connect(repo_created_cb)
 repo_deleted.connect(repo_deleted_cb)
-repo_trash_deleted.connect(repo_trash_deleted_cb)
+clean_up_repo_history_by_day.connect(clean_up_repo_history_by_day_cb)
+clean_up_repo_history_by_file.connect(clean_up_repo_history_by_file_cb)
 
 try:
     # ../conf/seahub_settings.py

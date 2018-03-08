@@ -82,26 +82,41 @@ else:
             seafevents.save_user_events (session, etype, detail, users, None)
         session.close()
 
-    def repo_trash_deleted_cb(sender, **kwargs):
+    def clean_up_repo_history_by_day_cb(sender, **kwargs):
         """When a repo trash is deleted, the operator will be recorded.
         """
         org_id = kwargs['org_id']
         operator = kwargs['operator']
         repo_id = kwargs['repo_id']
         days = kwargs.get('days', None)
-        filepath = kwargs.get('filepath', None)
         etype = 'repo-trash-deleted'
 
         detail = {
-            'repo_id': repo_id
+            'repo_id': repo_id,
+            'days': days
         }
-        if days is not None:
-            detail['days'] = days
-        elif filepath is not None:
-            detail['filepath'] = filepath
+
+        users = [operator]
+        session = SeafEventsSession()
+        if org_id > 0:
+            seafevents.save_org_user_events (session, org_id, etype, detail, users, None)
         else:
-            logging.error('Unknown event input')
-            return
+            seafevents.save_user_events (session, etype, detail, users, None)
+        session.close()
+
+    def clean_up_repo_history_by_file_cb(sender, **kwargs):
+        """When a repo trash is deleted, the operator will be recorded.
+        """
+        org_id = kwargs['org_id']
+        operator = kwargs['operator']
+        repo_id = kwargs['repo_id']
+        filepath = kwargs['filepath']
+        etype = 'repo-trash-deleted'
+
+        detail = {
+            'repo_id': repo_id,
+            'filepath': filepath
+        }
 
         users = [operator]
         session = SeafEventsSession()
