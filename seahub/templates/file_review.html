@@ -24,6 +24,13 @@
 #file-discussions {
     width:400px;
 }
+/* as comments panel is shown */
+#pdf,
+.CodeMirror,
+#file-view-tip {
+    width: auto;
+    margin: 0 10px;
+}
 </style>
 {% endblock %}
 
@@ -87,9 +94,9 @@
         <form action="" method="post" class="msg-form">
             <img src="{% avatar_url request.user 64 %}" alt="" width="32" class="avatar-circle fleft" />
             <div class="msg-body">
-                <textarea name="message" placeholder="{% trans "Add a comment..." %}" title="{% trans "Add a comment..." %}" aria-label="{% trans "Add a comment..." %}" class="msg-input" <% if (!is_reviewer) { %>disabled="disabled"<% } %>></textarea>
+                <textarea name="message" placeholder="{% trans "Add a comment..." %}" title="{% trans "Add a comment..." %}" aria-label="{% trans "Add a comment..." %}" class="msg-input" <% if (!can_add_comment) { %>disabled="disabled"<% } %>></textarea>
                 <p class="error hide"></p>
-                <% if (is_reviewer) { %>
+                <% if (can_add_comment) { %>
                 <button type="submit" class="submit msg-submit">{% trans "Submit" %}</button>
                 <% } else { %>
                 <button type="submit" class="submit btn-disabled" disabled="disabled">{% trans "Submit" %}</button>
@@ -106,7 +113,7 @@
             <a class="msg-username ellipsis" title="{{review.reviewer}}" href="<%= user_profile_url %>">{{ review.reviewer|email2nickname }}</a>
             <span class="msg-time" title="<%- time %>"><%- time_from_now %></span>
             <div class="msg-ops fright vh">
-                <% if (is_reviewer) { %>
+                <% if (can_delete_msg) { %>
                     <a class="msg-op sf2-icon-delete op-icon js-del-msg" title="{% trans "Delete" %}" aria-label="{% trans "Delete" %}" href="#" data-id="<%= comment_id %>"></a>
                 <% } %>
             </div>
@@ -181,7 +188,9 @@ $('#submit-review, #cancel-review').on('click', function() {
             $btn.closest('div').hide();
             $('#status').html(status_text).show();
             $('.comments-panel-footer [name="message"]').prop('disabled', true);
-            $('.comments-panel-footer .submit').prop('disabled', true).removeClass('msg-submit');
+            $('.comments-panel-footer .submit').prop('disabled', true)
+                .removeClass('msg-submit').addClass('btn-disabled');
+            $('.msg .js-del-msg').hide();
         },
         error: function(xhr) {
             var error_msg;
@@ -260,7 +269,7 @@ var fileDiscussions = {
 
     render: function () {
         this.$el.html($(this.tmpl({
-            'is_reviewer': this.is_reviewer
+            'can_add_comment': this.is_reviewer && '{{review.status}}' == 'started'
         })));
 
         this.$listContainer = $('.file-discussion-list', this.$el);
@@ -383,7 +392,7 @@ var fileDiscussions = {
             }),
             'time': m.format('LLLL'),
             'time_from_now': this.util_getRelativeTimeStr(m),
-            'is_reviewer': this.is_reviewer,
+            'can_delete_msg': this.is_reviewer && '{{review.status}}' == 'started',
             'user_profile_url': user_profile_url
         });
 

@@ -700,6 +700,7 @@ def file_review(request, review_id):
             'review': review,
             'repo': repo,
             'filename': u_filename,
+            'path': path,
             'raw_path': raw_path,
             'err': err_msg,
             'filetype': filetype,
