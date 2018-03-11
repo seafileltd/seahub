@@ -79,7 +79,15 @@ STATICFILES_DIRS = (
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
     '%s/static' % PROJECT_ROOT,
+    '%s/frontend/assets' % PROJECT_ROOT,
 )
+
+WEBPACK_LOADER = {
+    'DEFAULT': {
+        'BUNDLE_DIR_NAME': 'bundles/',
+        'STATS_FILE': os.path.join(PROJECT_ROOT, 'frontend/webpack-stats.json'),
+    }
+}
 
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.CachedStaticFilesStorage'
 
@@ -207,6 +215,7 @@ INSTALLED_APPS = (
     'constance.backends.database',
     'post_office',
     'termsandconditions',
+    'webpack_loader',
 
     'seahub.api2',
     'seahub.avatar',

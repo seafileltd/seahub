@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load render_bundle from webpack_loader %}
 {% load seahub_tags avatar_tags i18n staticfiles %}
 {% load url from future %}
 
@@ -38,6 +39,8 @@
 {% block main_class %}ovhd d-flex fd-col{% endblock %}
 
 {% block main_content %}
+    <div id="react-container"></div>
+
     <div id="view-hd">
         <div>
             <h2 class="file-view-hd">
@@ -126,6 +129,8 @@
 {% endblock %}
 
 {% block extra_script %}
+{% render_bundle 'main' %}
+
 <script type="text/javascript" src="{% static "scripts/lib/jquery-ui.min.js" %}"></script> {# for 'tabs' used in share popup #}
 <script type="text/javascript" src="{% static "scripts/lib/underscore.js" %}"></script>
 <script type="text/javascript" src="{% static "scripts/lib/moment-with-locales.min.js" %}"></script>
