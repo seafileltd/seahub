@@ -5,6 +5,7 @@ var config = require('./webpack.config')
 new WebpackDevServer(webpack(config), {
   publicPath: config.output.publicPath,
   hot: true,
+  // progress: true,
   contentBase: './assets',
   historyApiFallback: true,
   headers: {
