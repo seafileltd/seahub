@@ -248,19 +248,10 @@ def handle_spreadsheet(raw_path, obj_id, fileext, ret_dict):
     handle_document(raw_path, obj_id, fileext, ret_dict)
 
 def handle_pdf(raw_path, obj_id, fileext, ret_dict, watermark=''):
-    if USE_PDFJS:
-        # use pdfjs to preview PDF
-        pass
-    elif HAS_OFFICE_CONVERTER:
-        convert_tmp_filename = get_convert_tmp_filename(obj_id, watermark)
-        # use pdf2htmlEX to prefiew PDF
-        err = prepare_converted_html(raw_path, obj_id, fileext, ret_dict,
-                                    watermark, convert_tmp_filename)
-        # populate return value dict
-        ret_dict['err'] = err
-    else:
-        # can't preview PDF
-        ret_dict['filetype'] = 'Unknown'
+    convert_tmp_filename = get_convert_tmp_filename(obj_id, watermark)
+    err = prepare_converted_html(raw_path, obj_id, fileext, ret_dict,
+                                 watermark, convert_tmp_filename)
+    ret_dict['err'] = err
 
 def convert_md_link(file_content, repo_id, username):
     def repl(matchobj):
@@ -904,13 +895,12 @@ def view_shared_file(request, fileshare):
             handle_document(inner_path, obj_id, fileext, ret_dict)
         elif filetype == SPREADSHEET:
             handle_spreadsheet(inner_path, obj_id, fileext, ret_dict)
-        elif filetype == PDF:
-            watermark = ''
-            if ENABLE_SHARE_LINK_WATERMARK:
-                watermark = email2nickname(shared_by) + '\t' + shared_by 
-            handle_pdf(inner_path, obj_id, fileext, ret_dict, watermark)
     else:
         ret_dict['err'] = err_msg
+
+    if ENABLE_SHARE_LINK_WATERMARK:
+        watermark = email2nickname(shared_by) + '\t' + shared_by 
+        handle_pdf(inner_path, obj_id, fileext, ret_dict, watermark)
 
     accessible_repos = get_unencry_rw_repos_by_user(request)
     save_to_link = reverse('save_shared_link') + '?t=' + token

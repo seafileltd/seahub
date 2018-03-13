@@ -1132,8 +1132,6 @@ if HAS_OFFICE_CONVERTER:
     @cluster_delegate(delegate_add_office_convert_task)
     def add_office_convert_task(file_id, doctype, raw_path, 
                                 watermark='', convert_tmp_filename=''):
-        if convert_tmp_filename == '':
-            convert_tmp_filename = file_id
         rpc = _get_office_converter_rpc()
         d = rpc.add_task(file_id, doctype, raw_path, watermark, convert_tmp_filename)
         return {
