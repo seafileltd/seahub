@@ -1,11 +1,15 @@
-export const sortRepos = (repos=[], sortBy="mtime") => {
-  if (sortBy === 'mtime') {
-    return repos.sort((a, b) => a['mtime'] - b['mtime'])
-  } else if (sortBy === 'size') {
-    return repos.sort((a, b) => a['size'] - b['size'])
-  } else if (sortBy === 'name') {
-     let a = repos.sort((a, b) => a['name'] - b['name'])
-    console.log(a);
-    return a;
-  }
+const sortBy = (type, field) => {
+    switch (type) {
+        case "string" :
+            return (a, b) => (a[field] < b[field]) ? -1 : 1;
+        default:
+            return (a, b) => b[field] - a[field];
+    }
 }
+
+export const sortReposFunc = sort =>
+    (sort === "SORTED_BY_NAME") ?
+        sortBy("string", "name") :
+        (sort === "SORTED_BY_SIZE") ?
+            sortBy("number", "size") :
+            sortBy("number", "mtime")
