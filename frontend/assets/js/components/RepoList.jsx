@@ -3,7 +3,7 @@ import { Component } from 'react';
 import { sortRepos, removeRepo } from '../actions';
 import { sortReposFunc } from '../utils';
 
-const RepoListHeader = ({ store }) => (
+const RepoListHeader = (props, { store }) => (
     <thead>
       <tr>
         <th width="4%"></th>
@@ -14,6 +14,10 @@ const RepoListHeader = ({ store }) => (
       </tr>
     </thead>
 )
+
+RepoListHeader.contextTypes = {
+    store: PropTypes.object
+}
 
 const RepoListItem = ({ name, size_formatted, mtime_relative, onRemove=f=>f }) => (
     <tr>
@@ -26,7 +30,7 @@ const RepoListItem = ({ name, size_formatted, mtime_relative, onRemove=f=>f }) =
 )
 
 
-const RepoListBody = ({ store }) => {
+const RepoListBody = (props, { store }) => {
     const { repos, sort } = store.getState();
     const sortedRepos = [...repos].sort(sortReposFunc(sort));
 
@@ -38,19 +42,22 @@ const RepoListBody = ({ store }) => {
     )
 }
 
-const RepoListTable = ({ store }) =>
+RepoListBody.contextTypes = {
+    store: PropTypes.object
+}
+
+const RepoListTable = () =>
           <table>
-          <RepoListHeader store={store} />
-          <RepoListBody store={store} />
+          <RepoListHeader />
+          <RepoListBody />
           </table>;
 
-const RepoList = ({ store }) =>{
-    const { repos } = store.getState();
+const RepoList = ({ repos }) =>{
 
     return (
         <div>
           {(repos.length !== 0) ?
-              <RepoListTable store={store} /> :
+              <RepoListTable /> :
                   <span>You don't have any libraries.</span>
                   }
         </div>

@@ -7,11 +7,12 @@ import storeFactory from './store';
 
 
 const store = storeFactory();
+window.store = store
 
 const render = () =>
       ReactDOM.render(
           <App store={store} />,
         document.getElementById("main"));
 
-store.subscribe(render);
+// store.subscribe(render);
 render()
