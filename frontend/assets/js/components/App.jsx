@@ -1,74 +1,52 @@
 import PropTypes from 'prop-types';
 import { Component } from 'react';
-import { getRepoList, removeRepo } from '../SeafileAPI';
-import { sortRepos } from '../utils';
-import { loadRepos } from '../actions';
-import { sortReposFunc } from '../utils';
+import { connect } from 'react-redux';
+
+import { fetchRepos } from '../actions';
 import { NewRepo, Repos } from './containers';
+import LoadingMsg from './ui/LoadingMsg';
 
 class App extends Component {
     constructor(props) {
         super(props);
     }
 
-    getChildContext() {
-        return {
-            store: this.props.store
-        }
-    }
-
     componentWillMount() {
         console.log('will mount');
-
-        this.unsubscribe = store.subscribe(
-            () => this.forceUpdate()
-        );
-
-        getRepoList().then(
-            repos => {
-                console.log('success get repos');
-                // this.setState({repos, loading: false});
-                store.dispatch(loadRepos(repos));
-            },
-            error => {
-                console.log('error get repos');
-                // this.setState({error, loading: false});
-            }
-        );
-    }
-
-    componentDidMount() {
-        console.log('did mount');
-    }
-
-    componentWillUnmount() {
-        this.unsubscribe();
-    }
-
-    componentWillUpdate() {
-        console.log('will update');
+        const { dispatch } = this.props;
+        dispatch( fetchRepos() );
     }
 
     render() {
-        const { repos, sort } = store.getState();
-        const sortedRepos = [...repos].sort(sortReposFunc(sort));
+        const { loading, error } = this.props;
 
         return (
             <div className="app">
-              <NewRepo  />
-              <Repos />
+              {
+              (loading) ?
+                      <LoadingMsg /> :
+                      <div>
+                          <NewRepo  />
+                          <Repos />
+                      </div>
+              }
+
+              {(error) ? <p>Error loading libraries: {error.message}</p> : ""}
             </div>
         )
     }
 }
 
-App.propTypes = {
-    store: PropTypes.object.isRequired
+function mapStateToProps (state) {
+    const { loading, error } = state;
+    return {
+        loading,
+        error
+    }
 }
 
-App.childContextTypes = {
-    store: PropTypes.object.isRequired
-}
-
-export default App;
+export default connect(
+    mapStateToProps,
+    null
+)(App);
 

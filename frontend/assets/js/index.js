@@ -4,15 +4,15 @@ window.React = React;
 
 import App from './components/App';
 import storeFactory from './store';
-
+import { Provider } from 'react-redux';
 
 const store = storeFactory();
-window.store = store
 
 const render = () =>
       ReactDOM.render(
-          <App store={store} />,
+        <Provider store={store}>
+          <App />
+        </Provider>,
         document.getElementById("main"));
 
-// store.subscribe(render);
 render()

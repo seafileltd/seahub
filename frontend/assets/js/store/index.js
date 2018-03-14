@@ -1,5 +1,6 @@
 import { createStore, combineReducers, applyMiddleware } from 'redux';
-import { repos, sort } from './reducers';
+import thunkMiddleware from 'redux-thunk';
+import { repos, sort, loading, error } from './reducers';
 
 const logger = store => next => action => {
     let result
@@ -20,8 +21,10 @@ const saver = store => next => action => {
 }
 
 const storeFactory = (initialState={}) =>
-    applyMiddleware(logger)(createStore)(
-      combineReducers({repos, sort}),
+    applyMiddleware(logger,
+                    thunkMiddleware, // lets us dispatch() functions
+                   )(createStore)(
+      combineReducers({repos, sort, loading, error}),
       initialState
     )
 

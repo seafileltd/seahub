@@ -18,7 +18,7 @@ export const repo = (state={}, action) => {
 
 export const repos = (state=[], action) => {
   switch (action.type) {
-    case C.LOAD_REPOS:
+    case C.LOAD_REPOS_SUCC:
     return action.repos
 
     case C.ADD_REPO:
@@ -47,3 +47,28 @@ export const sort = (state="SORTED_BY_NAME", action) => {
   }
 }
 
+export const loading = (state=false, action) => {
+  switch (action.type) {
+    case C.LOAD_REPOS:
+    return true
+
+    case C.LOAD_REPOS_SUCC:
+    return false
+
+    case C.LOAD_REPOS_FAIL:
+    return false
+
+    default:
+    return state
+  }
+}
+
+export const error = (state=null, action) => {
+  switch (action.type) {
+    case C.LOAD_REPOS_FAIL:
+    return action.err
+
+  default:
+    return state
+  }
+}

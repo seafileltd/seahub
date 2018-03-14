@@ -1,10 +1,30 @@
 import C from './constants';
+import { getRepoList } from './SeafileAPI';
 
-export const loadRepos = (repos) =>
+export const loadRepos = () =>
   ({
-    type: C.LOAD_REPOS,
+    type: C.LOAD_REPOS
+  })
+
+export const loadReposSucc = (repos) =>
+  ({
+    type: C.LOAD_REPOS_SUCC,
     repos
   })
+
+export const loadReposFail = (err) =>
+  ({
+    type: C.LOAD_REPOS_FAIL,
+    err
+  })
+
+export const fetchRepos = () => dispatch => {
+    dispatch( loadRepos() );
+    return getRepoList().then(
+      repos => dispatch( loadReposSucc(repos) ),
+      error => dispatch( loadReposFail(error) )
+    )
+}
 
 export const addRepo = (name, mtime_relative='just now', size_formatted='0 bytes') =>
   ({
