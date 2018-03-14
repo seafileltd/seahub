@@ -5,7 +5,9 @@ export const repo = (state={}, action) => {
     case C.ADD_REPO:
     return {
       name: action.name,
+      mtime: Date.now(),
       mtime_relative: action.mtime_relative,
+      size: 0,
       size_formatted: action.size_formatted
     }
 

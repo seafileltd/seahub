@@ -1,11 +1,10 @@
 import PropTypes from 'prop-types';
 import { Component } from 'react';
-import RepoList from './RepoList';
-import AddRepoForm from './AddRepoForm';
 import { getRepoList, removeRepo } from '../SeafileAPI';
 import { sortRepos } from '../utils';
 import { loadRepos } from '../actions';
 import { sortReposFunc } from '../utils';
+import { NewRepo, Repos } from './containers';
 
 class App extends Component {
     constructor(props) {
@@ -56,8 +55,8 @@ class App extends Component {
 
         return (
             <div className="app">
-              <AddRepoForm  />
-              <RepoList repos={sortedRepos} />
+              <NewRepo  />
+              <Repos />
             </div>
         )
     }

@@ -1,12 +1,9 @@
-import PropTypes from 'prop-types';
-import { addRepo } from '../actions';
-
-const AddRepoForm = (props, { store }) => {
+const AddRepoForm = ({ onNewRepo=f=>f }) => {
     let _name;
 
     const submit = (e) => {
         e.preventDefault();
-        store.dispatch( addRepo(_name.value) );
+        onNewRepo(_name.value);
         _name.value = "";
         _name.focus();
     };
@@ -19,10 +16,6 @@ const AddRepoForm = (props, { store }) => {
             <button>Add</button>
         </form>
     )
-};
-
-AddRepoForm.contextTypes = {
-    store: PropTypes.object
 };
 
 export default AddRepoForm;
