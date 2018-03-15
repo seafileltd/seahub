@@ -236,9 +236,9 @@ def handle_textual_file(request, filetype, raw_path, ret_dict):
     ret_dict['file_enc'] = file_enc
     ret_dict['file_encoding_list'] = file_encoding_list
 
-def handle_document(raw_path, obj_id, fileext, ret_dict):
+def handle_document(raw_path, obj_id, fileext, ret_dict, watermark='', convert_tmp_filename=''):
     if HAS_OFFICE_CONVERTER:
-        err = prepare_converted_html(raw_path, obj_id, fileext, ret_dict)
+        err = prepare_converted_html(raw_path, obj_id, fileext, ret_dict, watermark, convert_tmp_filename)
         # populate return value dict
         ret_dict['err'] = err
     else:
@@ -247,8 +247,7 @@ def handle_document(raw_path, obj_id, fileext, ret_dict):
 def handle_spreadsheet(raw_path, obj_id, fileext, ret_dict):
     handle_document(raw_path, obj_id, fileext, ret_dict)
 
-def handle_pdf(raw_path, obj_id, fileext, ret_dict, watermark=''):
-    convert_tmp_filename = get_convert_tmp_filename(obj_id, watermark)
+def handle_pdf(raw_path, obj_id, fileext, ret_dict, watermark='', convert_tmp_filename=''):
     err = prepare_converted_html(raw_path, obj_id, fileext, ret_dict,
                                  watermark, convert_tmp_filename)
     ret_dict['err'] = err
@@ -889,18 +888,23 @@ def view_shared_file(request, fileshare):
 
         """Choose different approach when dealing with different type of file."""
         inner_path = gen_inner_file_get_url(access_token, filename)
+        watermark = ''
+        convert_tmp_filename = ''
+        if ENABLE_SHARE_LINK_WATERMARK:
+            watermark = email2nickname(shared_by) + '\t' + shared_by 
+            convert_tmp_filename = get_convert_tmp_filename(obj_id, watermark)
+
         if is_textual_file(file_type=filetype):
             handle_textual_file(request, filetype, inner_path, ret_dict)
         elif filetype == DOCUMENT:
-            handle_document(inner_path, obj_id, fileext, ret_dict)
+            handle_document(inner_path, obj_id, fileext, ret_dict, watermark, convert_tmp_filename)
         elif filetype == SPREADSHEET:
             handle_spreadsheet(inner_path, obj_id, fileext, ret_dict)
+        elif filetype == PDF:
+            handle_pdf(inner_path, obj_id, fileext, ret_dict, watermark, convert_tmp_filename)
+
     else:
         ret_dict['err'] = err_msg
-
-    if ENABLE_SHARE_LINK_WATERMARK:
-        watermark = email2nickname(shared_by) + '\t' + shared_by 
-        handle_pdf(inner_path, obj_id, fileext, ret_dict, watermark)
 
     accessible_repos = get_unencry_rw_repos_by_user(request)
     save_to_link = reverse('save_shared_link') + '?t=' + token
@@ -928,6 +932,7 @@ def view_shared_file(request, fileshare):
             'save_to_link': save_to_link,
             'traffic_over_limit': traffic_over_limit,
             'permissions': permissions,
+            'convert_tmp_filename': convert_tmp_filename
             }, context_instance=RequestContext(request))
 
 def view_raw_shared_file(request, token, obj_id, file_name):
@@ -1599,9 +1604,9 @@ def office_convert_query_status(request, cluster_internal=False):
     ret = {'success': False}
     try:
         if ENABLE_SHARE_LINK_WATERMARK:
-            shared_token = request.GET.get('shared_token', '')
+            shared_token = request.GET.get('token', '')
             fileshare = FileShare.objects.get_valid_file_link_by_token(shared_token)
-            if not fileshare or not ENABLE_SHARE_LINK_WATERMARK:
+            if not fileshare:
                 ret = query_office_convert_status(file_id, doctype, cluster_internal=cluster_internal)
             else:
                 if not convert_tmp_filename:
@@ -1616,7 +1621,7 @@ def office_convert_query_status(request, cluster_internal=False):
 
     return ret
 
-_OFFICE_PAGE_PATTERN = re.compile(r'^file\.css|file\.outline|index.html|index_html_.*.png|[a-z0-9]+\.pdf$')
+_OFFICE_PAGE_PATTERN = re.compile(r'^file\.css|file\.outline|index.html|index_html_.*.png|[a-z0-9A-Z]+\.pdf$')
 def office_convert_get_page(request, repo_id, commit_id, path, filename, cluster_internal=False):
     """Valid static file path inclueds:
     - index.html for spreadsheets and index_html_xxx.png for images embedded in spreadsheets
@@ -1634,15 +1639,18 @@ def office_convert_get_page(request, repo_id, commit_id, path, filename, cluster
     else:
         file_id = _office_convert_get_file_id(request, repo_id, commit_id, path)
 
-    shared_token = request.GET.get('shared_token')
-    if ENABLE_SHARE_LINK_WATERMARK and shared_token:
+    convert_tmp_filename = request.GET.get('convert_tmp_filename')
+    if ENABLE_SHARE_LINK_WATERMARK:
+        shared_token = request.GET.get('token', '')
         fileshare = FileShare.objects.get_valid_file_link_by_token(shared_token)
-        if fileshare:
-            watermark = email2nickname(fileshare.username) + '\t' + fileshare.username
-            file_id = get_convert_tmp_filename(file_id, watermark)
+        if not fileshare or not ENABLE_SHARE_LINK_WATERMARK:
+            pass
+        else:
+            file_id = convert_tmp_filename
+
 
     if filename.endswith('.pdf'):
-        filename = "{0}.pdf".format(file_id)
+        filename = file_id + '.pdf'
 
     resp = get_office_converted_page(
         request, repo_id, commit_id, path, filename, file_id, cluster_internal=cluster_internal)
