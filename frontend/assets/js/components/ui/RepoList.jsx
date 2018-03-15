@@ -1,5 +1,6 @@
 import { Component } from 'react';
-//import { sortReposFunc } from '../utils';
+import { Link } from 'react-router-dom';
+
 
 const RepoListHeader = ({ onSort=f=>f }) => (
     <thead>
@@ -13,10 +14,10 @@ const RepoListHeader = ({ onSort=f=>f }) => (
     </thead>
 )
 
-const RepoListItem = ({ name, size_formatted, mtime_relative, onRemove=f=>f }) => (
+const RepoListItem = ({ id, name, size_formatted, mtime_relative, onRemove=f=>f }) => (
     <tr>
       <td></td>
-      <td>{name}</td>
+      <td><Link to={`libs/${id}`}>{name}</Link></td>
       <td>{size_formatted}</td>
       <td dangerouslySetInnerHTML={{__html: mtime_relative}}></td>
       <td><a href="javascript:void(0)" onClick={onRemove} >Delete</a></td>
