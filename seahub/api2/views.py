@@ -931,6 +931,7 @@ class PubRepos(APIView):
                 "size_formatted": filesizeformat(r.size),
                 "encrypted": r.encrypted,
                 "permission": r.permission,
+                "starred": r.starred,
                 "root": r.root,
             }
             if r.encrypted:
