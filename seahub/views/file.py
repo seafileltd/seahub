@@ -1526,9 +1526,7 @@ def office_convert_add_task(request):
     if len(file_id) != 40:
         return HttpResponseBadRequest('invalid params')
 
-    return add_office_convert_task(file_id, doctype, raw_path, internal=True,
-                                   watermark=watermark,
-                                   convert_tmp_filename=convert_tmp_filename)
+    return add_office_convert_task(file_id, doctype, raw_path, watermark, convert_tmp_filename, internal=True)
 
 def _check_office_convert_perm(request, repo_id, path, ret):
     token = request.GET.get('token', '')
@@ -1612,7 +1610,7 @@ def office_convert_query_status(request, cluster_internal=False):
                 if not convert_tmp_filename:
                     watermark = email2nickname(fileshare.username) + '\t' + fileshare.username
                     convert_tmp_filename = get_convert_tmp_filename(file_id, watermark)
-                ret = query_office_convert_status(file_id, doctype, convert_tmp_filename, cluster_internal=cluster_internal)
+                ret = query_office_convert_status(file_id, doctype, shared_token, convert_tmp_filename, cluster_internal=cluster_internal)
         else:
             ret = query_office_convert_status(file_id, doctype, cluster_internal=cluster_internal)
     except Exception, e:
@@ -1639,21 +1637,25 @@ def office_convert_get_page(request, repo_id, commit_id, path, filename, cluster
     else:
         file_id = _office_convert_get_file_id(request, repo_id, commit_id, path)
 
-    convert_tmp_filename = request.GET.get('convert_tmp_filename')
+    convert_tmp_filename = request.GET.get('convert_tmp_filename', '')
+    shared_token = request.GET.get('token', '')
     if ENABLE_SHARE_LINK_WATERMARK:
-        shared_token = request.GET.get('token', '')
         fileshare = FileShare.objects.get_valid_file_link_by_token(shared_token)
-        if not fileshare or not ENABLE_SHARE_LINK_WATERMARK:
-            pass
-        else:
-            file_id = convert_tmp_filename
+        if not fileshare:
+            convert_tmp_filename = ''
+        elif not convert_tmp_filename:
+            watermark = email2nickname(fileshare.username) + '\t' + fileshare.username
+            convert_tmp_filename = get_convert_tmp_filename(file_id, watermark)
 
 
     if filename.endswith('.pdf'):
-        filename = file_id + '.pdf'
+        if convert_tmp_filename:
+            filename = convert_tmp_filename + '.pdf'
+        else:
+            filename = file_id + '.pdf'
 
     resp = get_office_converted_page(
-        request, repo_id, commit_id, path, filename, file_id, cluster_internal=cluster_internal)
+        request, repo_id, commit_id, path, filename, file_id, shared_token, convert_tmp_filename, cluster_internal=cluster_internal)
     if filename.endswith('.page'):
         content_type = 'text/html'
     else:

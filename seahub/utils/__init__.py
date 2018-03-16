@@ -1091,19 +1091,22 @@ if HAS_OFFICE_CONVERTER:
 
         return json.loads(ret)
 
-    def delegate_query_office_convert_status(file_id, doctype, convert_tmp_filename=''):
+    def delegate_query_office_convert_status(file_id, doctype, shared_token='', convert_tmp_filename=''):
         url = urljoin(OFFICE_CONVERTOR_ROOT, '/office-convert/internal/status/')
-        url += '?file_id=%s&doctype=%s&convert_tmp_filename=%s' % (file_id, doctype, convert_tmp_filename)
+        url += '?file_id=%s&doctype=%s&convert_tmp_filename=%s&token=%s' % (file_id, doctype, convert_tmp_filename, shared_token)
         headers = _office_convert_token_header(file_id)
         ret = do_urlopen(url, headers=headers).read()
 
         return json.loads(ret)
 
-    def delegate_get_office_converted_page(request, repo_id, commit_id, path, static_filename, file_id):
+    def delegate_get_office_converted_page(request, repo_id, commit_id, path, static_filename, file_id, shared_token, convert_tmp_filename):
         url = urljoin(OFFICE_CONVERTOR_ROOT,
                       '/office-convert/internal/static/%s/%s%s/%s' % (
                           repo_id, commit_id, urlquote(path), urlquote(static_filename)))
-        url += '?file_id=' + file_id
+        url = '{0}?file_id={1}&token={2}&convert_tmp_filename={3}'.format(url,
+                                                                                  file_id,
+                                                                                  shared_token,
+                                                                                  convert_tmp_filename)
         headers = _office_convert_token_header(file_id)
         timestamp = request.META.get('HTTP_IF_MODIFIED_SINCE')
         if timestamp:
@@ -1139,7 +1142,7 @@ if HAS_OFFICE_CONVERTER:
         }
 
     @cluster_delegate(delegate_query_office_convert_status)
-    def query_office_convert_status(file_id, doctype, convert_tmp_filename=''):
+    def query_office_convert_status(file_id, doctype, shared_token='', convert_tmp_filename=''):
         if convert_tmp_filename == '': 
             convert_tmp_filename = file_id 
         rpc = _get_office_converter_rpc()
@@ -1155,7 +1158,7 @@ if HAS_OFFICE_CONVERTER:
         return ret
 
     @cluster_delegate(delegate_get_office_converted_page)
-    def get_office_converted_page(request, repo_id, commit_id, path, static_filename, file_id):
+    def get_office_converted_page(request, repo_id, commit_id, path, static_filename, file_id, shared_token, convert_tmp_filename):
         office_out_dir = OFFICE_HTML_DIR
         filepath = os.path.join(file_id, static_filename)
         if static_filename.endswith('.pdf'):
