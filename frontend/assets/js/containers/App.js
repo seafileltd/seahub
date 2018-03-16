@@ -4,10 +4,11 @@ import { connect } from 'react-redux';
 import { Route, Switch } from 'react-router-dom';
 
 import { fetchRepos } from '../actions';
-import { NewRepo, Repos } from './containers';
-import LoadingMsg from './ui/LoadingMsg';
-import Whoops404 from './ui/Whoops404';
-import PageTemplate from './ui/PageTemplate'
+import { NewRepo } from './NewRepo';
+import { Repos } from './repos';
+import LoadingMsg from '../components/LoadingMsg';
+import Whoops404 from '../components/Whoops404';
+import PageTemplate from '../components/PageTemplate';
 
 class App extends Component {
     constructor(props) {
@@ -25,20 +26,20 @@ class App extends Component {
 
         return (
             <PageTemplate>
-            <div className="app col-md-9">
-              {
-                  (loading) ?
-                      <LoadingMsg /> :
-                          <div >
+                <div className="app col-md-9">
+                    {
+                        (loading) ?
+                            <LoadingMsg /> :
+                            <div >
                                 <NewRepo  />
-                                    <Repos />
-                              </div>
-                          }
+                                <Repos />
+                            </div>
+                    }
 
-                          {(error) ? <p>Error loading libraries: {error.message}</p> : ""}
-            </div>
+                    {(error) ? <p>Error loading libraries: {error.message}</p> : ''}
+                </div>
             </PageTemplate>
-        )
+        );
     }
 }
 
@@ -47,7 +48,7 @@ function mapStateToProps (state) {
     return {
         loading,
         error
-    }
+    };
 }
 
 export default connect(

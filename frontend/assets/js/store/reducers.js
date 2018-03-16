@@ -1,4 +1,6 @@
+import { combineReducers } from 'redux'
 import C from '../constants';
+
 
 export const repo = (state={}, action) => {
   switch (action.type) {
@@ -72,3 +74,9 @@ export const error = (state=null, action) => {
     return state
   }
 }
+
+const rootReducer = combineReducers({
+  repos, sort, loading, error
+})
+
+export default rootReducer

@@ -3,8 +3,8 @@ import { Route, Switch } from 'react-router-dom';
 import { Provider } from 'react-redux';
 
 import App from './App';
-import Whoops404 from './ui/Whoops404';
-import PageTemplate from './ui/PageTemplate';
+import Whoops404 from '../components/Whoops404';
+import PageTemplate from '../components/PageTemplate';
 
 const Root = ({ store }) => (
     <Provider store={store}>
