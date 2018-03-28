@@ -247,9 +247,15 @@ def handle_spreadsheet(raw_path, obj_id, fileext, ret_dict):
     handle_document(raw_path, obj_id, fileext, ret_dict)
 
 def handle_pdf(raw_path, obj_id, fileext, ret_dict, watermark='', convert_tmp_filename=''):
-    err = prepare_converted_html(raw_path, obj_id, fileext, ret_dict,
-                                 watermark, convert_tmp_filename)
-    ret_dict['err'] = err
+    if ENABLE_SHARE_LINK_WATERMARK:
+        if HAS_OFFICE_CONVERTER:
+            err = prepare_converted_html(raw_path, obj_id, fileext, ret_dict,
+                                         watermark, convert_tmp_filename)
+            ret_dict['err'] = err
+        else:
+            logger.warn('Office converter disabled, failed to add watermark to pdf file.')
+    else:
+        pass                    # use pdfjs to handle pdf file
 
 def convert_md_link(file_content, repo_id, username):
     def repl(matchobj):
@@ -887,17 +893,19 @@ def view_shared_file(request, fileshare):
         watermark = ''
         convert_tmp_filename = ''
         if ENABLE_SHARE_LINK_WATERMARK:
-            watermark = email2nickname(shared_by) + '\t' + shared_by 
+            watermark = email2nickname(shared_by) + '\t' + shared_by
             convert_tmp_filename = get_convert_tmp_filename(obj_id, watermark)
 
         if is_textual_file(file_type=filetype):
             handle_textual_file(request, filetype, inner_path, ret_dict)
         elif filetype == DOCUMENT:
-            handle_document(inner_path, obj_id, fileext, ret_dict, watermark, convert_tmp_filename)
+            handle_document(inner_path, obj_id, fileext, ret_dict, watermark,
+                            convert_tmp_filename)
         elif filetype == SPREADSHEET:
             handle_spreadsheet(inner_path, obj_id, fileext, ret_dict)
         elif filetype == PDF:
-            handle_pdf(inner_path, obj_id, fileext, ret_dict, watermark, convert_tmp_filename)
+            handle_pdf(inner_path, obj_id, fileext, ret_dict, watermark,
+                       convert_tmp_filename)
 
     else:
         ret_dict['err'] = err_msg
@@ -1080,19 +1088,20 @@ def view_file_via_shared_dir(request, fileshare):
         watermark = ''
         convert_tmp_filename = ''
         if ENABLE_SHARE_LINK_WATERMARK:
-            watermark = email2nickname(shared_by) + '\t' + shared_by 
+            watermark = email2nickname(shared_by) + '\t' + shared_by
             convert_tmp_filename = get_convert_tmp_filename(obj_id, watermark)
 
         """Choose different approach when dealing with different type of file."""
         if is_textual_file(file_type=filetype):
             handle_textual_file(request, filetype, inner_path, ret_dict)
         elif filetype == DOCUMENT:
-            handle_document(inner_path, obj_id, fileext, ret_dict)
-            handle_document(inner_path, obj_id, fileext, ret_dict, watermark, convert_tmp_filename)
+            handle_document(inner_path, obj_id, fileext, ret_dict, watermark,
+                            convert_tmp_filename)
         elif filetype == SPREADSHEET:
             handle_spreadsheet(inner_path, obj_id, fileext, ret_dict)
         elif filetype == PDF:
-            handle_pdf(inner_path, obj_id, fileext, ret_dict, watermark, convert_tmp_filename)
+            handle_pdf(inner_path, obj_id, fileext, ret_dict, watermark,
+                       convert_tmp_filename)
         elif filetype == IMAGE:
             current_commit = get_commits(repo_id, 0, 1)[0]
             real_parent_dir = os.path.dirname(real_path)

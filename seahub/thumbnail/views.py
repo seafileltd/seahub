@@ -251,11 +251,12 @@ def share_link_thumbnail_get(request, token, size, path):
         watermark = fileshare.username
     else:
         watermark = ''
-    thumbnail_file = get_thumbnail_file_path(THUMBNAIL_ROOT, obj_id, size, \
-            watermark=watermark)
+    thumbnail_file = get_thumbnail_file_path(THUMBNAIL_ROOT, obj_id, size,
+                                             watermark=watermark)
+
     if not os.path.exists(thumbnail_file):
-        success, status_code = generate_thumbnail(request, repo_id, size, \
-                image_path, watermark=watermark)
+        success, status_code = generate_thumbnail(request, repo_id, size,
+                                                  image_path, watermark=watermark)
 
     if success:
         try:
