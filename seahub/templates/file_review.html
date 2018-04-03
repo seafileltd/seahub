@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load render_bundle from webpack_loader %}
 {% load seahub_tags avatar_tags i18n staticfiles %}
-
+{% load url from future %}
 
 {% block sub_title %}{{filename}} - {% endblock %}
 {% block viewport %}{% endblock %}
@@ -24,6 +25,13 @@
 #file-discussions {
     width:400px;
 }
+/* as comments panel is shown */
+#pdf,
+.CodeMirror,
+#file-view-tip {
+    width: auto;
+    margin: 0 10px;
+}
 </style>
 {% endblock %}
 
@@ -31,71 +39,30 @@
 {% block main_class %}ovhd d-flex fd-col{% endblock %}
 
 {% block main_content %}
+    <div id="react-container"></div>
+
     <div id="view-hd">
         <div>
             <h2 class="file-view-hd">
-                <span class="vam">{{ filename }}</span>
-                {% if is_starred %}
-                <a id="file-star" class="vam no-deco icon-star" href="#" title="{% trans "starred" %}" aria-label="{% trans "starred" %}"></a>
-                {% else %}
-                <a id="file-star" class="vam no-deco icon-star-empty" href="#" title="{% trans "unstarred" %}" aria-label="{% trans "unstarred" %}"></a>
-                {% endif %}
-
-                {% if is_pro %}
-                <img class="file-locked-icon cspt vam {% if not file_locked %}hide{% endif %}" width="16" src="{{ MEDIA_URL }}img/file-locked-32.png" alt="{% trans "locked" %}" title="{% trans "locked" %}" aria-label="{% trans "locked" %}" />
-                {% endif %}
+                {% blocktrans %}Review {{ filename }}{% endblocktrans %}
             </h2>
-            <div class="commit">
-                <a href="{% url 'user_profile' latest_contributor %}" class="name vam">{{ latest_contributor|email2nickname }}</a>
-                <span class="time vam">{{ last_modified|translate_seahub_time}}</span>
-                {% block update_detail %}
-                {% if last_commit_id %}
-                  <span class="vam">{% trans "updated this file"%}.</span>
-                {% endif %}
-                {% endblock %}
-            </div>
         </div>
 
+        {% if review.status == 'started' %}
+        <p id="status" class="hide"></p>
         <div class="file-view-op">
-            {% if not repo.encrypted %}
-            {% if filetype == 'PDF' or filetype == 'Document' or filetype == 'Markdown' %}
-            <button id="review" class="btn-white">{% trans "Review" %}</button>
+            {% if request.user.username == review.reviewer %}
+            <button id="cancel-review" class="">{% trans "Cancel Review" %}</button>
+            <button id="submit-review" class="">{% trans "Submit Review" %}</button>
             {% endif %}
-            {% endif %}
-
-        <div class="sf-btn-group inline-block">
-            <a class="sf-btn-group-btn sf-btn-group-btn-first sf-btn-link op-icon sf2-icon-folder" href="{{ SITE_ROOT }}#common/lib/{{ repo.id }}/{{ parent_dir|strip_slash }}" title="{% trans "Open parent folder" %}"></a>
-
-            {% if can_lock_unlock_file %}
-                {% if not file_locked %}
-                    <button id="lock-file" class="sf-btn-group-btn op-icon sf2-icon-lock" title="{% trans "Lock" %}"></button>
-                    <button id="unlock-file" class="sf-btn-group-btn op-icon sf2-icon-unlock hide" title="{% trans "Unlock" %}"></button>
-                {% elif locked_by_me %}
-                    <button id="unlock-file" class="sf-btn-group-btn op-icon sf2-icon-unlock" title="{% trans "Unlock" %}"></button>
-                    <button id="lock-file" class="sf-btn-group-btn op-icon sf2-icon-lock hide" title="{% trans "Lock" %}"></button>
-                {% endif %}
-            {% endif %}
-
-            {% if not repo.encrypted %}
-            {% if request.user.permissions.can_generate_share_link %}
-            <button id="share" class="sf-btn-group-btn op-icon sf2-icon-share" data-link="{{ file_shared_link }}" data-token="{{ fileshare.token }}" title="{% trans "Share" %}"></button>
-            {% endif %}
-            {% endif %}
-
-            {% if file_perm == 'rw' %}
-            <a class="sf-btn-group-btn sf-btn-link op-icon sf2-icon-clock" id="history" href="{% url 'file_revisions' repo.id %}?p={{ path|urlencode }}" title="{% trans "History" %}"></a>
-            {% endif %}
-
-            {% if request.user.is_authenticated and can_edit_file %}
-                {% block edit_file %}
-                {% endblock %}
-            {% endif %}
-
-            <a class="sf-btn-group-btn sf-btn-link op-icon sf2-icon-download" href="?dl=1" id="download" title="{% trans "Download"%}"></a>
-
-            <button id="discuss" class="sf-btn-group-btn sf-btn-group-btn-last op-icon sf2-icon-msgs" title="{% trans "Comment" %}"></button>
         </div>
-        </div>
+        {% endif %}
+        {% if review.status == 'finished' %}
+        <p id="status">{% trans "Status: finished." %}</p>
+        {% endif %}
+        {% if review.status == 'canceled' %}
+        <p id="status">{% trans "Status: canceled." %}</p>
+        {% endif %}
 
     </div>
 
@@ -114,17 +81,10 @@
         <div id="file-discussions" class="comments-panel" style="display:none;"></div>
     </div>
 
-    {% include "snippets/file_share_popup.html" %}
-
-    <div id="side-toolbar">
-        <ul class="side-toolbar">
-            <li class="item hide" id="back-to-top" title="{% trans "Back to top" %}"><img src="{{MEDIA_URL}}img/top.png" alt="{% trans "top" %}" /></li>
-        </ul>
-    </div>
 
 <script type="text/template" id="discussion-panel-tmpl">
     <div class="comments-panel-hd file-discussions-hd ovhd">
-        <a href="#" title="{% trans "Close" %}" aria-label="{% trans "Close" %}" class="sf-popover-close js-close sf2-icon-x1 op-icon"></a>
+        <!--a href="#" title="{% trans "Close" %}" aria-label="{% trans "Close" %}" class="sf-popover-close js-close sf2-icon-x1 op-icon"></a-->
         <h3 class="comments-panel-title">{% trans "Comments" %}</h3>
     </div>
     <div class="comments-panel-con file-discussions-con">
@@ -137,24 +97,27 @@
         <form action="" method="post" class="msg-form">
             <img src="{% avatar_url request.user 64 %}" alt="" width="32" class="avatar-circle fleft" />
             <div class="msg-body">
-                <textarea name="message" placeholder="{% trans "Add a comment..." %}" title="{% trans "Add a comment..." %}" aria-label="{% trans "Add a comment..." %}" class="msg-input"></textarea>
+                <textarea name="message" placeholder="{% trans "Add a comment..." %}" title="{% trans "Add a comment..." %}" aria-label="{% trans "Add a comment..." %}" class="msg-input" <% if (!can_add_comment) { %>disabled="disabled"<% } %>></textarea>
                 <p class="error hide"></p>
+                <% if (can_add_comment) { %>
                 <button type="submit" class="submit msg-submit">{% trans "Submit" %}</button>
+                <% } else { %>
+                <button type="submit" class="submit btn-disabled" disabled="disabled">{% trans "Submit" %}</button>
+                <% } %>
             </div>
         </form>
     </div>
 </script>
 <script type="text/template" id="discussion-tmpl">
 <li class="msg ovhd">
-    <img src="<%= avatar_url %>" alt="" width="32" class="avatar-circle fleft" />
+    <img src="{% avatar_url review.reviewer 64 %}" alt="" width="32" class="avatar-circle fleft" />
     <div class="msg-body">
         <div class="ovhd">
-            <a class="msg-username ellipsis" title="<%- user_name %>" href="<%= user_profile_url %>"><%- user_name %></a>
+            <a class="msg-username ellipsis" title="{{review.reviewer}}" href="<%= user_profile_url %>">{{ review.reviewer|email2nickname }}</a>
             <span class="msg-time" title="<%- time %>"><%- time_from_now %></span>
             <div class="msg-ops fright vh">
-                <a class="msg-op sf2-icon-reply op-icon js-reply-msg" title="{% trans "Reply" %}" aria-label="{% trans "Reply" %}" href="#" data-username="<%- user_name %>"></a>
                 <% if (can_delete_msg) { %>
-                    <a class="msg-op sf2-icon-delete op-icon js-del-msg" title="{% trans "Delete" %}" aria-label="{% trans "Delete" %}" href="#" data-id="<%= id %>"></a>
+                    <a class="msg-op sf2-icon-delete op-icon js-del-msg" title="{% trans "Delete" %}" aria-label="{% trans "Delete" %}" href="#" data-id="<%= comment_id %>"></a>
                 <% } %>
             </div>
         </div>
@@ -166,172 +129,73 @@
 {% endblock %}
 
 {% block extra_script %}
+{% render_bundle 'main' %}
+
 <script type="text/javascript" src="{% static "scripts/lib/jquery-ui.min.js" %}"></script> {# for 'tabs' used in share popup #}
 <script type="text/javascript" src="{% static "scripts/lib/underscore.js" %}"></script>
 <script type="text/javascript" src="{% static "scripts/lib/moment-with-locales.min.js" %}"></script>
 <script type="text/javascript" src="{% static "scripts/lib/marked.min.js" %}"></script>
-{% if highlight_keyword %}
-<script type="text/javascript" src="{{ MEDIA_URL }}js/findAndReplaceDOMText.js"></script>
+{% if not err %}
+<script type="text/javascript" src="{{MEDIA_URL}}js/pdf.js"></script>
+<script type="text/javascript">
+    {% if filetype == 'Document' %}
+            {% include 'snippets/document_file_viewer.html' %}
+    {% endif %}
+
+    {% if filetype == 'PDF' %}
+    var raw_path = "{{ raw_path|escapejs }}";
+    {% include 'snippets/pdfjs_file_viewer.html' %}
+    {% endif %}
+
+    {% if filetype == 'Markdown' %}
+    {% ifnotequal file_content None %}
+    $('#file-view').html('<div id="md-view" class="article"></div>');
+    var renderer = new marked.Renderer();
+    // remove 'id' attribute for headings
+    renderer.heading = function (text, level) {
+        return '<h' + level + '>' + text + '</h' + level + '>';
+    };
+    marked.setOptions({
+        renderer: renderer,
+        breaks: true, // keep linebreak
+        smartLists: true,
+        sanitize: true // Ignore any HTML that has been input
+    });
+    $('#md-view').html(marked('{{ file_content|escapejs }}')).children(':first').css('margin-top', '0');
+    {% endifnotequal %}
+    {% endif %}
+</script>
 {% endif %}
 <script type="text/javascript">
-// download
-$(function() {
-    var dld_url = $('#download').attr('href');
-    $('#file-view-tip').append('<a href="' + dld_url + '" class="sf-btn-link big-btn-link">' + "{% trans "Download" %}" + '</a>');
-});
 
-// share link
-{% include "snippets/shared_link_js.html" %}
-$('#share').on('click', function() {
-    var op = $(this),
-        name = "{{filename|escapejs}}",
-        path = "{{path|escapejs}}",
-        aj_data = {
-            'repo_id': "{{ repo.id }}",
-            'path': path
-        },
-        type = 'f',
-        cur_path = path.substr(0, path.length - name.length);
-
-    showSharePopup(op, name, aj_data, type, cur_path);
-
-    return false;
-});
-
-
-// star file
-$('#file-star').on('click', function() {
-    var op_icon = $(this), url_base;
-    url_base = '{% url "starredfiles" %}';
-
-    if (op_icon.hasClass('icon-star-empty')) {
-        // star the file
-        $.ajax({
-            url: url_base,
-            cache: false,
-            dataType: 'json',
-            type: 'POST',
-            beforeSend: prepareCSRFToken,
-            data: {
-                'repo_id': "{{ repo.id }}",
-                'p': "{{ path|escapejs }}"
-            },
-            success:function(data) {
-                op_icon.toggleClass('icon-star-empty icon-star');
-            },
-            error: ajaxErrorHandler
-        });
+// submit/cancel a review
+$('#submit-review, #cancel-review').on('click', function() {
+    var $btn = $(this);
+    var op = $btn.attr('id').indexOf('submit') != -1 ? 'submit' : 'cancel';
+    var review_status, status_text;
+    if (op == 'submit') {
+        review_status = 'finished';
+        status_text = '{% trans "Status: finished." %}';
     } else {
-        // unstar
-        $.ajax({
-            url: url_base + '?p=' + e("{{path|escapejs}}") + '&repo_id=' + "{{ repo.id }}",
-            cache: false,
-            dataType: 'json',
-            type: 'DELETE',
-            beforeSend: prepareCSRFToken,
-            success:function(data) {
-                op_icon.toggleClass('icon-star-empty icon-star');
-            },
-            error: ajaxErrorHandler
-        });
+        review_status = 'canceled';
+        status_text = '{% trans "Status: canceled." %}';
     }
-
-    return false;
-});
-
-{% if can_lock_unlock_file %}
-// lock/unlock file
-$('#lock-file, #unlock-file').on('click', function() {
-    var op = $(this).attr('id') == 'lock-file' ? 'lock' : 'unlock',
-        path = '{{path|escapejs}}';
     $.ajax({
-        url: '{% url 'api-v2.1-file-view' repo.id %}' + '?p=' + encodeURIComponent(path),
+        url: '{% url 'api-v2.1-review' review.id %}',
         type: 'PUT',
         dataType: 'json',
         cache: false,
         beforeSend: prepareCSRFToken,
-        data: {'operation': op},
-        success: function() {
-            $('#lock-file, #unlock-file, .file-locked-icon').toggleClass('hide');
-        },
-        error: ajaxErrorHandler
-    });
-});
-{% endif %}
-
-// set 'side toolbar' position
-function setToolbarPos() {
-    var toolbar = $('#side-toolbar');
-
-    // set toolbar pos
-    toolbar.css({'top': ($(window).height() - toolbar.outerHeight())/2});
-}
-(function () {
-    var to_top = $('#back-to-top');
-    to_top.on('click', function() {
-        $(window).scrollTop(0);
-    });
-    $(window).on('scroll', function() {
-        if ($(window).scrollTop() > 0) {
-            to_top.show();
-        } else {
-            to_top.hide();
-        }
-    });
-})();
-$(window).on('load resize', setToolbarPos);
-
-{% if highlight_keyword %}
-var ref_list = document.referrer.split('?');
-// referrer is 'search result' page, i.e, '{{SITE_ROOT}}search/?q=xx..'
-if (ref_list.length > 1 && ref_list[0].indexOf('search') > 0) {
-    var search_params = ref_list[1].split('&');
-    var search_keyword = search_params[0].substr(2); // get 'xx' from 'q=xx'
-
-    var highlight_kw = function(hl_area) { // 'hl_area': a node
-        findAndReplaceDOMText(hl_area, {
-            find: new RegExp(search_keyword, 'gim'),
-            replace: function(portion, match) { // portion is a part of a match
-                var node = document.createElement('span');
-                node.style.background = '#ffe761';
-                node.innerHTML = portion.text; // portion is an object
-                return node;
-            }
-        });
-    };
-}
-
-$(window).on('load', function() {
-    if (highlight_kw) {
-        // hl kw in file title
-        highlight_kw($('.file-view-hd span')[0]);
-
-        // hl kw in file content
-        if ('{{filetype}}' == 'Markdown') {
-            highlight_kw($('#file-view')[0]);
-        }
-        if ('{{fileext}}' == 'text' || '{{fileext}}' == 'txt') {
-            setTimeout(function(){ highlight_kw($('.CodeMirror')[0]); }, 500);
-        }
-    }
-});
-{% endif %}
-
-// start a review
-$('#review').on('click', function() {
-    $.ajax({
-        url: '{% url 'api-v2.1-reviews' %}',
-        type: 'POST',
-        dataType: 'json',
-        cache: false,
-        beforeSend: prepareCSRFToken,
         data: {
-            'repo_id': '{{ repo.id }}',
-            'path': "{{ path|escapejs }}"
+            'status': review_status
         },
         success: function(data) {
-            // turn to an independant review page
-            location.href = '{{SITE_ROOT}}review/' + encodeURIComponent(data.review_id) + '/';
+            $btn.closest('div').hide();
+            $('#status').html(status_text).show();
+            $('.comments-panel-footer [name="message"]').prop('disabled', true);
+            $('.comments-panel-footer .submit').prop('disabled', true)
+                .removeClass('msg-submit').addClass('btn-disabled');
+            $('.msg .js-del-msg').hide();
         },
         error: function(xhr) {
             var error_msg;
@@ -357,6 +221,12 @@ var fileDiscussions = {
 
     init: function() {
         var _this = this;
+
+        var is_reviewer = false; 
+        if ('{{review.reviewer|escapejs}}' == '{{request.user|escapejs}}') {
+            is_reviewer = true; 
+        }
+        this.is_reviewer = is_reviewer;
 
         this.setLocale();
 
@@ -403,7 +273,9 @@ var fileDiscussions = {
     },
 
     render: function () {
-        this.$el.html($(this.tmpl()));
+        this.$el.html($(this.tmpl({
+            'can_add_comment': this.is_reviewer && '{{review.status}}' == 'started'
+        })));
 
         this.$listContainer = $('.file-discussion-list', this.$el);
         this.$emptyTip = $('.no-discussion-tip', this.$el);
@@ -412,8 +284,7 @@ var fileDiscussions = {
         this.$msgInput = $('[name="message"]', this.$el);
     },
 
-    collectionUrl: '{% url "api2-file-comments" repo.id %}?p='
-        + e('{{path|escapejs}}') + '&avatar_size=64',
+    collectionUrl: '{% url "api-v2.1-review-comment" review.id %}',
 
     show: function() {
         this.render();
@@ -444,7 +315,7 @@ var fileDiscussions = {
             cache: false,
             dataType: 'json',
             success: function(data) {
-                var comments = data.comments;
+                var comments = data;
                 if (comments.length > 0) {
                     $(comments).each(function(index, item) {
                         _this.addOne(item);
@@ -476,7 +347,7 @@ var fileDiscussions = {
         var $submitBtn = $('[type="submit"]', this.$el)
         var msg = $.trim(this.$msgInput.val());
 
-        if (!msg) {
+        if (!this.is_reviewer || !msg) {
             return false;
         }
 
@@ -488,7 +359,7 @@ var fileDiscussions = {
             cache: false,
             dataType: 'json',
             beforeSend: prepareCSRFToken,
-            data: {'comment': msg},
+            data: {'content': msg},
             success: function(data) {
                 _this.$msgInput.val('');
                 _this.addOne(data);
@@ -516,24 +387,17 @@ var fileDiscussions = {
     itemTmpl: _.template($('#discussion-tmpl').html()),
 
     addOne: function(obj) {
-        var can_delete_msg = false;
-        var is_repo_owner = {% if is_repo_owner %}true{% else %}false{% endif %};
-        if (is_repo_owner ||
-            obj.user_email == '{{request.user|escapejs}}') {
-            can_delete_msg = true;
-        }
+        var user_profile_url = '{% url 'user_profile' review.reviewer %}';
 
-        var user_profile_url = '{{SITE_ROOT}}profile/' + encodeURIComponent(obj.user_email) + '/';
-
-        var m = moment(obj.created_at);
+        var m = moment(obj.time);
         var data = $.extend({}, obj, {
-            'content_marked': marked(obj.comment, {
+            'content_marked': marked(obj.content, {
                 breaks: true,
                 sanitize: true
             }),
             'time': m.format('LLLL'),
             'time_from_now': this.util_getRelativeTimeStr(m),
-            'can_delete_msg': can_delete_msg,
+            'can_delete_msg': this.is_reviewer && '{{review.status}}' == 'started',
             'user_profile_url': user_profile_url
         });
 
@@ -557,7 +421,7 @@ var fileDiscussions = {
     delOne: function(item) { // item: {id:, $el:}
         var _this = this;
         $.ajax({
-            url: '{{SITE_ROOT}}api2/repos/{{repo.id}}/file/comments/' + item.id + '/',
+            url: '{{SITE_ROOT}}api2/repos/{{repo.id}}/file/comments/' + item.id + '/', // TODO. api is not offered.
             type: 'delete',
             cache: false,
             beforeSend: prepareCSRFToken,
@@ -591,7 +455,9 @@ var fileDiscussions = {
 };
 // init
 fileDiscussions.init();
+fileDiscussions.show();
 
+/*
 $('#discuss').on('click', function() {
     if (fileDiscussions.$el.is(':visible')) {
         fileDiscussions.hide();
@@ -605,9 +471,6 @@ $(document).on('keydown', function(e) {
         fileDiscussions.hide();
     }
 });
-
-// for 'go back'
-var $history = $('#history');
-$history.attr('href', $history.attr('href') + '&referer=' + encodeURIComponent(location.href));
+*/
 </script>
 {% endblock %}
