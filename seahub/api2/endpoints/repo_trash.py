@@ -135,6 +135,8 @@ class RepoTrash(APIView):
 
             obj_full_path = posixpath.join(
                     item['parent_dir'], item['obj_name'])
+            # as we don't know `path` patameter stands for a file or folder
+            # we always right strip `/` from it.
             obj_full_path = normalize_file_path(obj_full_path)
 
             if obj_full_path in cleaned_path:
@@ -202,6 +204,12 @@ class RepoTrashItem(APIView):
         """
 
         # argument check
+        is_dir = request.data.get('is_dir', 'false')
+        is_dir = is_dir.lower()
+        if is_dir not in ('true', 'false'):
+            error_msg = "is_dir can only be 'true' or 'false."
+            return api_error(status.HTTP_400_BAD_REQUEST, error_msg)
+
         path = request.data.get('path', None)
         if not path:
             error_msg = 'path invalid.'
@@ -226,7 +234,9 @@ class RepoTrashItem(APIView):
         try:
             TrashCleanedItems.objects.add_item(repo_id, path)
             org_id = None if not request.user.org else request.user.org.org_id
-            clean_up_repo_trash_item.send(sender=None, org_id=org_id, operator=username, repo_id=repo_id, repo_name=repo.name, filepath=path)
+            clean_up_repo_trash_item.send(sender=None, org_id=org_id,
+                    operator=username, repo_id=repo_id, repo_name=repo.name,
+                    filepath=path, is_dir = is_dir == 'true')
         except Exception as e:
             logger.error(e)
             error_msg = 'Internal Server Error'

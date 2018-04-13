@@ -1,8 +1,10 @@
 # Copyright (c) 2012-2016 Seafile Ltd.
+# coding: utf8
 
+import time
 import logging
 import settings
-from seaserv import seafile_api
+from seaserv import seafile_api, send_message
 logger = logging.getLogger(__name__)
 
 if not hasattr(settings, 'EVENTS_CONFIG_FILE'):
@@ -24,7 +26,7 @@ else:
     from utils import SeafEventsSession
 
     def repo_created_cb(sender, **kwargs):
-        org_id  = kwargs['org_id']
+        org_id = kwargs['org_id']
         creator = kwargs['creator']
         repo_id = kwargs['repo_id']
         repo_name = kwargs['repo_name']
@@ -65,7 +67,7 @@ else:
         groups to which this repo is shared.
 
         """
-        org_id  = kwargs['org_id']
+        org_id = kwargs['org_id']
         usernames = kwargs['usernames']
 
         repo_owner = kwargs['repo_owner']
@@ -91,47 +93,38 @@ else:
     def clean_up_repo_trash_cb(sender, **kwargs):
         """When a repo trash is deleted, the operator will be recorded.
         """
-        org_id = kwargs['org_id']
+        for k in kwargs:
+            if isinstance(kwargs[k], unicode):
+                kwargs[k] = kwargs[k].encode('utf-8')
+
         operator = kwargs['operator']
         repo_id = kwargs['repo_id']
         days = kwargs.get('days', None)
         repo_name = kwargs['repo_name']
         etype = 'clean-up-repo-trash'
+        date = int(time.time())
 
-        detail = {
-            'repo_id': repo_id,
-            'days': days,
-            'repo_name': repo_name
-        }
-
-        users = [operator]
-        session = SeafEventsSession()
-        if org_id > 0:
-            seafevents.save_org_user_events(session, org_id, etype, detail, users, None)
-        else:
-            seafevents.save_user_events(session, etype, detail, users, None)
-        session.close()
+        try:
+            send_message('seahub.stats', '%s\t%s\t%s\t%s\t%s\t%s\t%s' % (etype, repo_id, repo_name, operator, days, date, True))
+        except Exception as e:
+            logger.error('Error when sending %s message: %s' % (etype, e))
 
     def clean_up_repo_trash_item_cb(sender, **kwargs):
         """When a repo trash is deleted, the operator will be recorded.
         """
-        org_id = kwargs['org_id']
+        for k in kwargs:
+            if isinstance(kwargs[k], unicode):
+                kwargs[k] = kwargs[k].encode('utf-8')
+
         operator = kwargs['operator']
         repo_id = kwargs['repo_id']
         filepath = kwargs['filepath']
         repo_name = kwargs['repo_name']
         etype = 'clean-up-repo-trash-item'
+        date = int(time.time())
+        is_dir = kwargs['is_dir']
 
-        detail = {
-            'repo_id': repo_id,
-            'filepath': filepath,
-            'repo_name': repo_name
-        }
-
-        users = [operator]
-        session = SeafEventsSession()
-        if org_id > 0:
-            seafevents.save_org_user_events(session, org_id, etype, detail, users, None)
-        else:
-            seafevents.save_user_events(session, etype, detail, users, None)
-        session.close()
+        try:
+            send_message('seahub.stats', '%s\t%s\t%s\t%s\t%s\t%d\t%s' % (etype, repo_id, repo_name, operator, filepath, date, is_dir))
+        except Exception as e:
+            logger.error('Error when sending %s message: %s' % (etype, e))
