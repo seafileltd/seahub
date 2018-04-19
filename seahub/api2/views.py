@@ -619,6 +619,8 @@ class Repos(APIView):
                     "root": '',
                     "head_commit_id": r.head_cmmt_id,
                     "version": r.version,
+                    "starred": r.starred if r.starred else '',
+                    "status": r.status if r.status else '',
                 }
 
                 if is_pro_version() and ENABLE_STORAGE_CLASSES:
@@ -682,6 +684,8 @@ class Repos(APIView):
                     "root": '',
                     "head_commit_id": r.head_cmmt_id,
                     "version": r.version,
+                    "starred": r.starred if r.starred else '',
+                    "status": r.status if r.status else '',
                 }
 
                 if r.repo_id in repos_with_admin_share_to:
@@ -767,6 +771,8 @@ class Repos(APIView):
                     "root": '',
                     "head_commit_id": r.head_cmmt_id,
                     "version": r.version,
+                    "starred": r.starred if r.starred else '',
+                    "status": r.status if r.status else '',
                 }
                 repos_json.append(repo)
 
