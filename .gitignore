@@ -40,3 +40,7 @@ ghostdriver.log
 seahub/thumbnail/thumb/*
 .virtualenv
 tags
+
+node_modules
+webpack-stats.json
+webpack-stats.dev.json

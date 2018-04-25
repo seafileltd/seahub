@@ -82,6 +82,13 @@ STATICFILES_DIRS = (
     '%s/static' % PROJECT_ROOT,
 )
 
+WEBPACK_LOADER = {
+    'DEFAULT': {
+        'BUNDLE_DIR_NAME': 'seafile-editor/',
+        'STATS_FILE': os.path.join(PROJECT_ROOT, 'frontend/webpack-stats.json'),
+    }
+}
+
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.CachedStaticFilesStorage'
 
 # StaticI18N config
@@ -208,6 +215,7 @@ INSTALLED_APPS = (
     'constance.backends.database',
     'post_office',
     'termsandconditions',
+    'webpack_loader',
 
     'seahub.api2',
     'seahub.avatar',
