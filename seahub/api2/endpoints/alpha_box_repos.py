@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 
-from seaserv import seafile_api
+from seaserv import seafile_api, seafserv_threaded_rpc
 
 from seahub.utils import is_org_context
 from seahub.utils.timeutils import timestamp_to_isoformat_timestr
@@ -33,6 +33,21 @@ def get_my_repo_info(repo):
     return repo_info
 
 def get_shared_in_repo_info(repo):
+    repo_info = {
+        "repo_id": repo.repo_id,
+        "name": repo.repo_name,
+        "size": repo.size,
+        "starred": repo.starred,
+        "last_modified": timestamp_to_isoformat_timestr(repo.last_modified),
+        "repo_owner": repo.user,
+        "permission": repo.permission,
+        "encrypted": repo.encrypted,
+        "status": repo.status if repo.status else '',
+    }
+
+    return repo_info
+
+def get_public_repo_info(repo):
     repo_info = {
         "repo_id": repo.repo_id,
         "name": repo.repo_name,
@@ -370,6 +385,29 @@ class AlphaBoxReposSearch(APIView):
 
         return result
 
+    def get_public_repos_info(self, request):
+
+        result = []
+
+        if is_org_context(request):
+            org_id = request.user.org.org_id
+            # TODO: seafile_api.list_org_inner_pub_repos(org_id)
+            repos = seafserv_threaded_rpc.list_org_inner_pub_repos(org_id)
+        else:
+            # TODO, not used currently
+            repos = seafserv_threaded_rpc.list_inner_pub_repos()
+
+        searched_name = request.GET.get('nameContains', '')
+        for repo in repos:
+            if searched_name.lower() not in repo.repo_name.lower():
+                continue
+
+            repo_info = get_public_repo_info(repo)
+            repo_info['type'] = 'public'
+            result.append(repo_info)
+
+        return result
+
     def get(self, request):
         """ Search repo by name
 
@@ -378,8 +416,8 @@ class AlphaBoxReposSearch(APIView):
         """
 
         r_type = request.GET.get('type', '')
-        if r_type and r_type not in ('mine', 'shared'):
-            error_msg = "type should be 'mine' or 'shared'."
+        if r_type and r_type not in ('mine', 'shared', 'public'):
+            error_msg = "type should be 'mine', 'shared' or 'public'."
             return api_error(status.HTTP_400_BAD_REQUEST, error_msg)
 
         searched_name = request.GET.get('nameContains', '')
@@ -389,17 +427,22 @@ class AlphaBoxReposSearch(APIView):
 
         owned_repos_info = []
         shared_in_repos_info = []
+        public_repos_info = []
         try:
             if not r_type:
                 owned_repos_info = self.get_owned_repos_info(request)
                 shared_in_repos_info = self.get_shared_in_repos_info(request)
+                public_repos_info = self.get_public_repos_info(request)
             elif r_type.lower() == 'mine':
                 owned_repos_info = self.get_owned_repos_info(request)
             elif r_type.lower() == 'shared':
                 shared_in_repos_info = self.get_shared_in_repos_info(request)
+            elif r_type.lower() == 'public':
+                public_repos_info = self.get_public_repos_info(request)
         except Exception as e:
             logger.error(e)
             error_msg = 'Internal Server Error'
             return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, error_msg)
 
-        return Response(owned_repos_info + shared_in_repos_info)
+        return Response(owned_repos_info + shared_in_repos_info +
+                public_repos_info)
