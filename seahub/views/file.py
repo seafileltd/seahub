@@ -365,6 +365,8 @@ def view_lib_file(request, repo_id, path):
     path = normalize_file_path(path)
     file_id = seafile_api.get_file_id_by_path(repo_id, path)
     if not file_id:
+        print path
+        print repr(path)
         return render_error(request, _(u'File does not exist'))
 
     # permission check

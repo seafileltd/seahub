@@ -49,8 +49,8 @@ class EditorUtilities {
     return url;
   }
 
-  uploadImage = (imageFile) => {
-    return (fetch(uploadUrl, {credentials: 'same-origin'})
+  uploadImage = (imageFile) =>
+    fetch(uploadUrl, {credentials: 'same-origin'})
       .then(res => res.json())
       .then(res => {
         const uploadLink = res + "?ret-json=1";
@@ -63,15 +63,14 @@ class EditorUtilities {
         formData.append("relative_path", "images");
         formData.append("file", newFile);
         // upload the image
-        fetch(uploadLink, {
+
+        return fetch(uploadLink, {
           method: "POST",
           body: formData,
-          mode: 'no-cors',
         })
-
-        return this._getImageURL(name);
       })
-    )}
+    .then(res => res.json())
+    .then(json => this._getImageURL(json[0].name))
 
   getFileURL(fileNode) {
     var url;

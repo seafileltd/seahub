@@ -7,6 +7,9 @@ new WebpackDevServer(webpack(config), {
   hot: true,
   contentBase: '../assets',
   historyApiFallback: true,
+  watchOptions: {
+    poll: 5000 // Check for changes every second
+  },
   headers: {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
