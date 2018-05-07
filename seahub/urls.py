@@ -158,6 +158,9 @@ urlpatterns = [
     url(r'^u/d/(?P<token>[a-f0-9]+)/$', view_shared_upload_link, name='view_shared_upload_link'),
 
     ### Misc ###
+    url(r'^app2/$', TemplateView.as_view(template_name="app2.html"), name="app2"),
+    url(r'^app3/$', TemplateView.as_view(template_name="app3.html"), name="app3"),
+
     url(r'^image-view/(?P<filename>.*)$', image_view, name='image_view'),
     url(r'^custom-css/$', custom_css_view, name='custom_css'),
     url(r'^i18n/$', i18n, name='i18n'),

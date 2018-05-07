@@ -1,0 +1,29 @@
+{% load render_bundle from webpack_loader %}
+{% load static %}
+<!DOCTYPE html>
+<html>
+    <head>
+         <meta charset="UTF-8" />
+
+         <link rel="shortcut icon" href="{{ MEDIA_URL }}{{ favicon_path }}" />
+    </head>
+    <body>
+         <div id="root"></div>
+         <script type="text/javascript">
+           window.app = {
+              config: {
+                  mediaUrl: '{{ MEDIA_URL }}',
+                  siteRoot: '{{ SITE_ROOT }}',
+              },
+              pageOptions: {
+                  repoID: '{{ repo.id }}',
+                  filePath: '{{ path }}',
+                  fileName: '{{ filename }}',
+                  domain: '{{ domain }}',
+                  protocol: '{{ protocol }}',
+              }
+          }
+         </script>
+         {% render_bundle 'app3' %}
+    </body>
+</html>
