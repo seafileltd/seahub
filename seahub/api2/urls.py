@@ -1,9 +1,10 @@
+
 # Copyright (c) 2012-2016 Seafile Ltd.
 from django.conf.urls import url, include
 
 from .views import *
 from .views_misc import ServerInfoView
-from .views_auth import LogoutDeviceView, ClientLoginTokenView
+from .views_auth import LogoutDeviceView, ClientLoginTokenView, LoginLinkView, LoginLinkGoView, LoginLinkStatusView
 from .endpoints.admin.two_factor_auth import TwoFactorAuthView
 from .endpoints.dir_shared_items import DirSharedItemsEndpoint
 from .endpoints.admin.account import Account
@@ -25,6 +26,9 @@ urlpatterns = [
     url(r'^server-info/$', ServerInfoView.as_view()),
     url(r'^logout-device/$', LogoutDeviceView.as_view()),
     url(r'^client-login/$', ClientLoginTokenView.as_view()),
+    url(r'^client-sso-link/$', LoginLinkView.as_view()),
+    url(r'^client-sso-link/(?P<link_uuid>[-0-9a-f]{36})/$', LoginLinkStatusView.as_view()),
+    url(r'^client-sso/(?P<link_uuid>[-0-9a-f]{36})/$', LoginLinkGoView.as_view()),
     url(r'^two-factor-auth/(?P<email>\S+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/$', TwoFactorAuthView.as_view(), name="two-factor-auth-view"),
     url(r'^device-wiped/$', RemoteWipeReportView.as_view()),
     url(r'^wopi/', include('seahub.wopi.urls')),

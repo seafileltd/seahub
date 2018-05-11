@@ -49,3 +49,38 @@ class ClientLoginTokenView(APIView):
         token = ClientLoginToken(randstr, request.user.username)
         token.save()
         return {'token': randstr}
+
+LINK_UUID = 'f2ccf9f5-9f61-4806-8fa3-20d233171a6a'
+class LoginLinkView(APIView):
+    throttle_classes = (UserRateThrottle,)
+
+    @json_response
+    def post(self, request):
+        return {'link': 'https://client-cert.seafile.io/client-sso/{}'.format(LINK_UUID)}
+
+class LoginLinkGoView(APIView):
+    throttle_classes = (UserRateThrottle,)
+
+    @json_response
+    def get(self, request, link_uuid):
+        if link_uuid != LINK_UUID:
+            return api_error(status.HTTP_400_BAD_REQUEST, "bad link")
+        else:
+            return {'status': 'TODO'}
+
+class LoginLinkStatusView(APIView):
+    throttle_classes = (UserRateThrottle,)
+
+    @json_response
+    def get(self, request, link_uuid):
+        import os
+        import json
+        if link_uuid != LINK_UUID:
+            return api_error(status.HTTP_400_BAD_REQUEST, "bad link")
+        status_file= '/tmp/status.json'
+        if os.path.exists(status_file):
+            with open(status_file, 'r') as fp:
+                ret = json.load(fp)
+        else:
+            ret = {'status': 'waiting'}
+        return ret
