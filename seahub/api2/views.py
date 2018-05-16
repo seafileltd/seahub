@@ -4080,7 +4080,7 @@ class EventsView(APIView):
             elif e.etype == 'clean-up-repo-trash-item':
                 d['repo_id'] = e.repo_id
                 d['author'] = e.username
-                d['time'] = datetime_to_isoformat_timestr(e.timestamp)
+                d['time'] = datetime_to_timestamp(e.timestamp)
                 d['filepath'] = e.filepath
                 d['repo_name'] = e.repo_name
                 d['etype'] = e.etype
