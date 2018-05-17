@@ -214,6 +214,12 @@ class AlphaBoxRepo(APIView):
         1. User can view repo.
         """
 
+        # resource check
+        repo = seafile_api.get_repo(repo_id)
+        if not repo:
+            error_msg = 'Library %s not found.' % repo_id
+            return api_error(status.HTTP_404_NOT_FOUND, error_msg)
+
         starred = request.data.get('starred', '')
         if starred:
             starred = starred.lower()
