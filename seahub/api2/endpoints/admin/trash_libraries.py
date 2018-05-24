@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 
-from seaserv import seafile_api
+from seaserv import seafile_api, send_message
 from pysearpc import SearpcError
 
 from seahub.utils import is_valid_username
@@ -105,13 +105,23 @@ class AdminTrashLibraries(APIView):
                     error_msg = 'owner invalid.'
                     return api_error(status.HTTP_400_BAD_REQUEST, error_msg)
 
+                repos = [ e.repo_id for e in seafile_api.get_trash_repos_by_owner(owner)]
                 seafile_api.empty_repo_trash_by_owner(owner)
             else:
+                repos = [e.repo_id for e in seafile_api.get_trash_repo_list(-1, -1)]
                 seafile_api.empty_repo_trash()
         except SearpcError as e:
             logger.error(e)
             error_msg = 'Internal Server Error'
             return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, error_msg)
+        else:
+            # send 10 repos to seafevent for each time
+            start = 0
+            for i in range(len(repos) / 10 + 1):
+                repos_id = ','.join(repos[start:start + 10])
+                start += 10
+                if repos_id:
+                    send_message('seahub.library', 'remove-libraries-from-trash\t%s' % repos_id)
 
         return Response({'success': True})
 
@@ -150,5 +160,7 @@ class AdminTrashLibrary(APIView):
             logger.error(e)
             error_msg = 'Internal Server Error'
             return api_error(status.HTTP_500_INTERNAL_SERVER_ERROR, error_msg)
+        else:
+            send_message('seahub.library', 'remove-libraries-from-trash\t%s' % repo_id)
 
         return Response({'success': True})
