@@ -79,16 +79,25 @@ class SeafileEditor extends React.Component {
   convertAndCheckNeedSave = (newValue) => {
     let currentContent = serialize(newValue.toJSON()).trim();
     let contentChanged = currentContent != this.state.savedContent.trim();
+
     this.setState({
       currentContent: currentContent,
       contentChanged: contentChanged
     })
+
+    if (contentChanged) {
+      this.props.onContentChange()
+    }
   }
 
   onCheckNeedSave = (newContent) => {
     this.setState({
       contentChanged: newContent != this.state.savedContent
     })
+
+    if (newContent != this.state.savedContent) {
+      this.props.onContentChange()
+    }
   }
 
   onChange = (change) => {
@@ -163,6 +172,7 @@ class SeafileEditor extends React.Component {
           value={this.state.richValue}
           contentChanged={this.state.contentChanged}
           saving={this.state.saving}
+          collabUsers={this.props.collabUsers}
         />
       );
     } else if (this.state.editor === "plain") {
@@ -176,6 +186,7 @@ class SeafileEditor extends React.Component {
           switchToRichTextEditor={this.switchToRichTextEditor}
           onSave={this.onPlainEditorSave}
           onChange={this.onChange}
+          collabUsers={this.props.collabUsers}
         />
       );
     }

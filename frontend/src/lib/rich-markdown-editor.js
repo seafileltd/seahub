@@ -18,7 +18,7 @@ import '../css/richeditor/right-panel.css';
 import '../css/richeditor/side-panel.css';
 import 'react-s-alert/dist/s-alert-default.css';
 import 'react-s-alert/dist/s-alert-css-effects/scale.css';
-import { IconButton, TableToolBar, Button, ButtonGroup, MoreMenu } from "./topbarcomponent/editorToolBar";
+import { IconButton, TableToolBar, Button, ButtonGroup, MoreMenu, CollabUsersButton } from "./topbarcomponent/editorToolBar";
 
 import { translate } from "react-i18next";
 
@@ -621,6 +621,9 @@ class RichMarkdownEditor extends React.Component {
           onInsertImage={this.onInsertImage}
           t = { t }
         />
+
+        <CollabUsersButton tooltip={t('show_users_on_this_document')} users={this.props.collabUsers} id={'usersButton'} />
+
         <AddLinkDialog
           showAddLinkDialog={this.state.showAddLinkDialog}
           toggleLinkDialog={this.toggleLinkDialog}
