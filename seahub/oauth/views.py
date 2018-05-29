@@ -37,9 +37,15 @@ if ENABLE_OAUTH:
 
     # Used for init an user for Seahub.
     PROVIDER_DOMAIN = getattr(settings, 'OAUTH_PROVIDER_DOMAIN', '')
-    ATTRIBUTE_MAP = {
-        'id': (True, "email"),
-    }
+    if 'weixin' in PROVIDER_DOMAIN.lower():
+        ATTRIBUTE_MAP = {
+            'UserId': (True, "email"),
+        }
+    else:
+        ATTRIBUTE_MAP = {
+            'id': (True, "email"),
+        }
+
     ATTRIBUTE_MAP.update(getattr(settings, 'OAUTH_ATTRIBUTE_MAP', {}))
 
 def oauth_check(func):
@@ -94,6 +100,8 @@ def oauth_login(request):
         return render(request, 'error.html', {
                 'error_msg': _('Error, please contact administrator.'),
                 })
+    if 'weixin' in PROVIDER_DOMAIN.lower():
+        authorization_url = authorization_url.replace('client_id', 'appid') + '#wechat_redirect'
 
     request.session['oauth_state'] = state
     return HttpResponseRedirect(authorization_url)
@@ -112,7 +120,7 @@ def oauth_callback(request):
                             redirect_uri=REDIRECT_URL)
 
     try:
-        session.fetch_token(TOKEN_URL, client_secret=CLIENT_SECRET,
+        token = session.fetch_token(TOKEN_URL, client_secret=CLIENT_SECRET,
                 authorization_response=request.get_full_path())
 
         if session._client.__dict__['token'].has_key('user_id'):
@@ -121,7 +129,10 @@ def oauth_callback(request):
             user_id = session._client.__dict__['token']['user_id']
             user_info_resp = session.get(USER_INFO_URL + '?user_id=%s' % user_id)
         else:
-            user_info_resp = session.get(USER_INFO_URL)
+            code = request.GET.get('code')
+            user_info_resp = session.get(
+                USER_INFO_URL + '?access_token=%s&code=%s' % (token['access_token'], code)
+            )
 
     except Exception as e:
         logger.error(e)
