@@ -126,11 +126,11 @@ class App extends React.Component {
         markdownContent: "",
         loading: true,
         mode: "view",
-        collabUsers: [],
       };
       this.fileInfo = {
         name: fileName,
-        path: filePath
+        path: filePath,
+        collabUsers: [],
       };
 
     socket.on('new user join', (user) => this.joinUser(user))
@@ -161,7 +161,7 @@ class App extends React.Component {
   updateUsers(users) {
     console.log('updateUsers', users);
     console.log(socket.id);
-    this.setState({collabUsers: Object.values(users)});
+    this.fileInfo.collabUsers = Object.values(users);
   }
 
   emitUserEditing() {
@@ -227,7 +227,7 @@ class App extends React.Component {
           fileInfo={this.fileInfo}
           markdownContent={this.state.markdownContent}
           editorUtilities={editorUtilities}
-          collabUsers={this.state.collabUsers}
+          collabUsers={this.fileInfo.collabUsers}
           onContentChange={this.emitUserEditing.bind(this)}
         />
       );
@@ -238,7 +238,7 @@ class App extends React.Component {
           markdownContent={this.state.markdownContent}
           switchToEditor={this.switchToEditor}
           editorUtilities={this.props.editorUtilities}
-          collabUsers={this.state.collabUsers}
+          collabUsers={this.fileInfo.collabUsers}
         />
       ) 
     }
