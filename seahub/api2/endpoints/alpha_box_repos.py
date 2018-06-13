@@ -117,6 +117,15 @@ class AlphaBoxRepos(APIView):
         if desc == 'true':
             order_by += '_desc'
 
+        # if not pass 'starred' parameter, return all repos
+        # if passed, filter repos by value of 'starred' parameter
+        starred_parameter = request.GET.get('starred', None)
+        if starred_parameter:
+            starred_parameter = starred_parameter.lower()
+            if starred_parameter not in ('true', 'false'):
+                error_msg = "starred should be 'true' or 'false'."
+                return api_error(status.HTTP_400_BAD_REQUEST, error_msg)
+
         result = []
         username = request.user.username
         if r_type == 'mine':
@@ -195,7 +204,20 @@ class AlphaBoxRepos(APIView):
             share_link_info["has_upload_link"] = repo_id in upload_link_share_repo_ids
             repo_info["share_link"] = share_link_info
 
-        return Response(result)
+        filtered_result = []
+
+        # filter by value of 'starred' parameter
+        if starred_parameter in ('true', 'false'):
+            for item in result:
+                if starred_parameter == 'true' and item['starred']:
+                    filtered_result.append(item)
+
+                if starred_parameter == 'false' and not item['starred']:
+                    filtered_result.append(item)
+        else:
+            filtered_result = result
+
+        return Response(filtered_result)
 
 
 class AlphaBoxRepo(APIView):
