@@ -35,7 +35,7 @@ from django.template.defaultfilters import filesizeformat
 from django.views.decorators.csrf import csrf_exempt
 
 from seaserv import seafile_api, ccnet_api
-from seaserv import get_repo, send_message, get_commits, \
+from seaserv import send_message, get_commits, \
     get_file_id_by_path, get_commit, get_file_size, \
     seafserv_threaded_rpc
 from pysearpc import SearpcError
@@ -737,7 +737,7 @@ def view_lib_file(request, repo_id, path):
 
 def view_history_file_common(request, repo_id, ret_dict):
     # check arguments
-    repo = get_repo(repo_id)
+    repo = seafile_api.get_repo(repo_id)
     if not repo:
         raise Http404
 
@@ -851,7 +851,7 @@ def _download_file_from_share_link(request, fileshare):
 
     username = request.user.username
     shared_by = fileshare.username
-    repo = get_repo(fileshare.repo_id)
+    repo = seafile_api.get_repo(fileshare.repo_id)
     if not repo:
         raise Http404
 
@@ -910,7 +910,7 @@ def view_shared_file(request, fileshare):
 
     shared_by = fileshare.username
     repo_id = fileshare.repo_id
-    repo = get_repo(repo_id)
+    repo = seafile_api.get_repo(repo_id)
     if not repo:
         raise Http404
 
@@ -1035,7 +1035,7 @@ def view_raw_shared_file(request, token, obj_id, file_name):
         return render(request, 'share_access_validation.html', d)
 
     repo_id = fileshare.repo_id
-    repo = get_repo(repo_id)
+    repo = seafile_api.get_repo(repo_id)
     if not repo:
         raise Http404
 
@@ -1089,7 +1089,7 @@ def view_file_via_shared_dir(request, fileshare):
 
     shared_by = fileshare.username
     repo_id = fileshare.repo_id
-    repo = get_repo(repo_id)
+    repo = seafile_api.get_repo(repo_id)
     if not repo:
         raise Http404
 
@@ -1242,7 +1242,7 @@ def file_edit_submit(request, repo_id):
     if is_locked and not locked_by_me:
         return error_json(_(u'File is locked'))
 
-    repo = get_repo(repo_id)
+    repo = seafile_api.get_repo(repo_id)
     if not repo:
         return error_json(_(u'The library does not exist.'))
     if repo.encrypted:
@@ -1318,7 +1318,7 @@ def file_edit_submit(request, repo_id):
 
 @login_required
 def file_edit(request, repo_id):
-    repo = get_repo(repo_id)
+    repo = seafile_api.get_repo(repo_id)
     if not repo:
         raise Http404
 
@@ -1417,7 +1417,7 @@ def view_raw_file(request, repo_id, file_path):
     - `request`:
     - `repo_id`:
     """
-    repo = get_repo(repo_id)
+    repo = seafile_api.get_repo(repo_id)
     if not repo:
         raise Http404
 
@@ -1471,7 +1471,7 @@ def download_file(request, repo_id, obj_id):
     - `obj_id`:
     """
     username = request.user.username
-    repo = get_repo(repo_id)
+    repo = seafile_api.get_repo(repo_id)
     if not repo:
         raise Http404
 
@@ -1548,7 +1548,7 @@ def text_diff(request, repo_id):
     if not (commit_id and path):
         return render_error(request, 'bad params')
 
-    repo = get_repo(repo_id)
+    repo = seafile_api.get_repo(repo_id)
     if not repo:
         return render_error(request, 'bad repo')
 
@@ -1735,7 +1735,7 @@ def file_access(request, repo_id):
     referer = request.META.get('HTTP_REFERER', None)
     next = settings.SITE_ROOT if referer is None else referer
 
-    repo = get_repo(repo_id)
+    repo = seafile_api.get_repo(repo_id)
     if not repo:
         messages.error(request, _("Library does not exist"))
         return HttpResponseRedirect(next)
@@ -1780,7 +1780,7 @@ def file_access(request, repo_id):
     events = events[:per_page]
 
     for ev in events:
-        ev.repo = get_repo(ev.repo_id)
+        ev.repo = seafile_api.get_repo(ev.repo_id)
         ev.filename = os.path.basename(ev.file_path)
         ev.time = utc_to_local(ev.timestamp)
         ev.event_type, ev.show_device = generate_file_audit_event_type(ev)
