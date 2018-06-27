@@ -219,7 +219,7 @@ define([
                         if (xhr.status == 403) {
                             err_msg = gettext("Permission error");
                         } else {
-                            err_msg = xhr.responseJSON.error_msg ? xhr.responseJSON.error_msg : gettext('Error');
+                            err_msg = xhr.responseJSON.error_msg ? Common.HTMLescape(xhr.responseJSON.error_msg) : gettext('Error');
                         }
                     } else {
                         err_msg = gettext('Please check the network.');
@@ -525,7 +525,7 @@ define([
                         if (xhr.status == 403) {
                             err_msg = gettext("Permission error");
                         } else {
-                            err_msg = xhr.responseJSON.error_msg ? xhr.responseJSON.error_msg : gettext('Error');
+                            err_msg = xhr.responseJSON.error_msg ? Common.HTMLescape(xhr.responseJSON.error_msg) : gettext('Error');
                         }
                     } else {
                         err_msg = gettext('Please check the network.');
@@ -674,7 +674,7 @@ define([
                         if (xhr.status == 403) {
                             err_msg = gettext("Permission error");
                         } else {
-                            err_msg = xhr.responseJSON.error_msg ? xhr.responseJSON.error_msg : gettext('Error');
+                            err_msg = xhr.responseJSON.error_msg ? Common.HTMLescape(xhr.responseJSON.error_msg) : gettext('Error');
                         }
                     } else {
                         err_msg = gettext('Please check the network.');
@@ -847,7 +847,7 @@ define([
                         if (xhr.status == 403) {
                             err_msg = gettext("Permission error");
                         } else {
-                            err_msg = xhr.responseJSON.error_msg ? xhr.responseJSON.error_msg : gettext('Error');
+                            err_msg = xhr.responseJSON.error_msg ? Common.HTMLescape(xhr.responseJSON.error_msg) : gettext('Error');
                         }
                     } else {
                         err_msg = gettext('Please check the network.');
@@ -945,7 +945,7 @@ define([
                     var err_msg;
                     if (xhr.responseText) {
                         var parsed_resp = JSON.parse(xhr.responseText);
-                        err_msg = parsed_resp.error||parsed_resp.error_msg;
+                        err_msg = Common.HTMLescape(parsed_resp.error||parsed_resp.error_msg);
                     } else {
                         err_msg = gettext("Failed. Please check the network.");
                     }
@@ -1038,7 +1038,7 @@ define([
                     var err_msg;
                     if (xhr.responseText) {
                         var parsed_resp = JSON.parse(xhr.responseText);
-                        err_msg = parsed_resp.error||parsed_resp.error_msg;
+                        err_msg = Common.HTMLescape(parsed_resp.error||parsed_resp.error_msg);
                     } else {
                         err_msg = gettext("Failed. Please check the network.");
                     }
