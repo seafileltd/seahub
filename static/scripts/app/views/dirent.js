@@ -289,11 +289,7 @@ define([
                     dir.remove(cid);
                 },
                 error: function(xhr) {
-                    if (xhr.responseText) {
-                        Common.feedback(JSON.parse(xhr.responseText).error||JSON.parse(xhr.responseText).error_msg, 'error');
-                    } else {
-                        Common.feedback(gettext("Please check the network."), 'error');
-                    }
+                    Common.ajaxErrorHandler(xhr);
                 }
             });
         },
@@ -503,13 +499,8 @@ define([
                 Common.disableButton(submit_btn);
 
                 var after_op_error = function(xhr) {
-                    var err_msg;
-                    if (xhr.responseText) {
-                        err_msg = JSON.parse(xhr.responseText).error_msg;
-                    } else {
-                        err_msg = gettext("Failed. Please check the network.");
-                    }
-                    Common.feedback(err_msg, 'error');
+                    var error_msg = Common.prepareAjaxErrorMsg(xhr); 
+                    Common.feedback(error_msg, 'error');
                     Common.enableButton(submit_btn);
                 };
                 _this.model.rename({
@@ -632,13 +623,7 @@ define([
                             detailsView.updateTags(data);
                         },
                         error: function(xhr) {
-                            var error_msg;
-                            if (xhr.responseText) {
-                                var parsed_resp = JSON.parse(xhr.responseText);
-                                error_msg = parsed_resp.error_msg || parsed_resp.detail;
-                            } else {
-                                error_msg = gettext("Failed. Please check the network.");
-                            }
+                            var error_msg = Common.prepareAjaxErrorMsg(xhr);
                             detailsView.updateTags({'error_msg': error_msg});
                         }
                     });
@@ -673,13 +658,7 @@ define([
                         }
                     },
                     error: function(xhr) {
-                        var error_msg;
-                        if (xhr.responseText) {
-                            var parsed_resp = JSON.parse(xhr.responseText);
-                            error_msg = parsed_resp.error_msg || parsed_resp.detail;
-                        } else {
-                            error_msg = gettext("Failed. Please check the network.");
-                        }
+                        var error_msg = Common.prepareAjaxErrorMsg(xhr);
                         detailsView.update({'error_msg': error_msg});
                     }
                 });
