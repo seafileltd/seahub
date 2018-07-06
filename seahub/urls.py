@@ -296,7 +296,7 @@ urlpatterns = [
     url(r'^api/v2.1/wikis/(?P<slug>[^/]+)/pages/(?P<page_name>[^/]+)/$', WikiPageView.as_view(), name='api-v2.1-wiki-page'),
 
     ## user::activities
-    url(r'^api/v2.1/activities/$', ActivitiesView.as_view(), name='api-v1.1-acitvity'),
+    url(r'^api/v2.1/activities/$', ActivitiesView.as_view(), name='api-v2.1-acitvity'),
 
     ## admin::sysinfo
     url(r'^api/v2.1/admin/sysinfo/$', SysInfo.as_view(), name='api-v2.1-sysinfo'),

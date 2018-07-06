@@ -67,6 +67,7 @@ class ActivitiesView(APIView):
         if events and len(events) == count + 1:
             events_more = True
             events = events[:-1]
+            events_more_offset -= 1
 
         events_list = []
         for e in events:
@@ -93,6 +94,9 @@ class ActivitiesView(APIView):
                 d['commit_id'] = e.commit.id
                 d['converted_cmmt_desc'] = translate_commit_desc_escape(convert_cmmt_desc_link(e.commit))
                 d['repo_encrypted'] = e.repo.encrypted
+
+            if e.op_type == 'rename' and e.obj_type == 'repo':
+                d['old_repo_name'] = e.old_repo_name
 
             size = request.GET.get('size', 36)
             url, is_default, date_uploaded = api_avatar_url(d['author'], size)
