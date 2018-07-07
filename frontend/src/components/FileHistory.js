@@ -1,10 +1,11 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
-import { gettext as _, siteRoot, lang } from '../globals';
+import { gettext as _, siteRoot, lang, getUrl } from '../globals';
 import Moment from 'react-moment';
 import filesize from 'filesize';
+import { compose } from 'recompose';
 
 const PER_PAGE = 1;
+const repoID = window.app.pageOptions.repoID;
 
 const applySetResult = (result) => (prevState) => ({
   data: result.data,
@@ -21,7 +22,6 @@ const applyUpdateResult = (result) => (prevState) => ({
 });
 
 const getFileHistoryUrl = (repo_id, path, page=1, per_page=PER_PAGE) => {
-  let repoID = window.app.pageOptions.repoID;
   let filePath = encodeURIComponent(window.app.pageOptions.filePath);
   return `${siteRoot}api/v2.1/repos/${repoID}/file/new_history/?path=${filePath}&page=${page}&per_page=${per_page}`;
 };
@@ -67,18 +67,14 @@ class FileHistory extends React.Component {
         <Header />
         <BackNav />
         <Tip />
-        <Breadcrumb />
-        <Table
-          data={this.state.data}
-        />
 
-        {
-          (this.state.page !== null && this.state.hasMore) &&
-            <LoadMoreIndicator
-              onPaginatedGet={this.onPaginatedGet}
-              isLoading={this.state.isLoading}
-            />
-        }
+        <TableWithBreadcrumbAndLoadMore
+          data={this.state.data}
+          onPaginatedGet={this.onPaginatedGet}
+          isLoading={this.state.isLoading}
+          hasMore={this.state.hasMore}
+          page={this.state.page}
+        />
 
       </div>
     );
@@ -93,12 +89,6 @@ const BackNav = () => (
   <a href="#" className="go-back" title="Back">
     <span className="icon-chevron-left"></span>
   </a>
-);
-
-const Breadcrumb = () => (
-  <div className="commit-list-topbar ovhd">
-    <p className="path fleft">Current Path: </p>
-  </div>
 );
 
 const Tip = () => (
@@ -121,7 +111,7 @@ const Table = ({ data }) => (
         item =>
           <tr key={item.commit_id}>
             <td className="time"><span title={item.ctime}><Moment locale={lang} fromNow>{item.ctime}</Moment></span></td>
-            <td><img src={item.creator_avatar_url} width="16" height="16" className="avatar" /> <a href="#" className="vam">{item.creator_name}</a></td>
+            <td><img src={item.creator_avatar_url} width="16" height="16" className="avatar" /> <a href={getUrl({name: 'user_profile', username: item.creator_email})} className="vam">{item.creator_name}</a></td>
             <td>{filesize(item.size, {base: 10})}</td>
             <td>
               <a href="#">Restore</a>
@@ -135,16 +125,42 @@ const Table = ({ data }) => (
   </table>
 );
 
-const LoadMoreIndicator = ({ isLoading, onPaginatedGet }) => (
-  <div id="history-more">
-    { isLoading &&
-    <div id="history-more-loading">
-      <span className="loading-icon loading-tip"></span>
+const withBreadcrumb = (Component) => (props) =>
+  <div>
+    <div className="commit-list-topbar ovhd">
+      <p className="path fleft">Current Path:
+      <a href={getUrl({name: 'common_lib', repoID: repoID, path: '/'})}>{window.app.pageOptions.repoName}</a>
+        {window.app.pageOptions.filePath}
+</p>
+    </div>
+
+    <Component {...props} />
+
+  </div>;
+
+const withLoadMore = (conditionFn) => (Component) => (props) =>
+  <div>
+    <Component {...props} />
+
+    { conditionFn(props) &&
+    <div id="history-more">
+      { props.isLoading &&
+      <div id="history-more-loading">
+        <span className="loading-icon loading-tip"></span>
+      </div>
+      }
+
+      <button id="history-more-btn" onClick={props.onPaginatedGet} className="full-width-btn">{_('More')}</button>
     </div>
     }
+  </div>;
 
-    <button id="history-more-btn" onClick={onPaginatedGet} className="full-width-btn">{_('More')}</button>
-  </div>
-);
+const loadMoreCondition = props =>
+  props.page !== null && props.hasMore;
+
+const TableWithBreadcrumbAndLoadMore = compose(
+  withBreadcrumb,
+  withLoadMore(loadMoreCondition),
+)(Table);
 
 export default FileHistory;
