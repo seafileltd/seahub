@@ -58,7 +58,8 @@ module.exports = {
 
     fileHistory: [
       require.resolve('./polyfills'),
-      require.resolve('react-dev-utils/webpackHotDevClient'),
+      require.resolve('webpack-dev-server/client') + '?http://192.168.99.100:3000',
+      require.resolve('webpack/hot/dev-server'),
       paths.appSrc + "/fileHistory.js",
     ],
 
