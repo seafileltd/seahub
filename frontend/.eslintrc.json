@@ -1,53 +1,56 @@
 {
-    "env": {
-        "browser": true,
-        "es6": true
+  "env": {
+    "browser": true,
+    "es6": true
+  },
+  "extends": [
+    // "react-app",
+    "eslint:recommended",
+    "plugin:react/recommended"
+  ],
+  "parser": "babel-eslint",
+  "parserOptions": {
+    "ecmaFeatures": {
+      "experimentalObjectRestSpread": true,
+      "jsx": true
     },
-    "extends": [
-        "react-app",
-        "eslint:recommended"
+    "sourceType": "module"
+  },
+  "plugins": [
+    "react"
+  ],
+  "rules": {
+    "indent": [
+      "warn",
+      2
     ],
-    "parser": "babel-eslint",
-    "parserOptions": {
-        "ecmaFeatures": {
-            "experimentalObjectRestSpread": true,
-            "jsx": true
-        },
-        "sourceType": "module"
-    },
-    "plugins": [
-        "react"
+    "linebreak-style": [
+      "warn",
+      "unix"
     ],
-    "rules": {
-        "indent": [
-            "warn",
-            2
-        ],
-        "linebreak-style": [
-            "warn",
-            "unix"
-        ],
-        "quotes": [
-            "warn",
-            "single"
-        ],
-        "semi": [
-            "warn",
-            "always"
-        ],
+    "quotes": [
+      "warn",
+      "single"
+    ],
+    "semi": [
+      "warn",
+      "always"
+    ],
 
 
-        // overwride error to warning
-        "no-case-declarations": "warn",
-        "no-cond-assign": "warn",
-        "no-redeclare": "warn",
-        "no-unreachable": "warn",
-        "no-class-assign": "warn",
-        "no-unused-vars": "warn",
-        "no-irregular-whitespace": "warn",
-        "no-console": "warn",
+    // overwride error to warning
+    "no-case-declarations": "warn",
+    "no-cond-assign": "warn",
+    "no-redeclare": "warn",
+    "no-unreachable": "warn",
+    "no-class-assign": "warn",
+    "no-unused-vars": "warn",
+    "no-irregular-whitespace": "warn",
+    "no-console": "warn",
 
-        "react/jsx-indent": ["warn", 2]
+    "react/jsx-indent": ["warn", 2],
+    "react/prop-types": "warn",
+    "react/display-name": "warn"
 
-    }
+  }
 }

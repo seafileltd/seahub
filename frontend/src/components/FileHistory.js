@@ -6,6 +6,7 @@ import { compose } from 'recompose';
 
 const PER_PAGE = 1;
 const repoID = window.app.pageOptions.repoID;
+const filePath = encodeURIComponent(window.app.pageOptions.filePath);
 
 const applySetResult = (result) => (prevState) => ({
   data: result.data,
@@ -22,7 +23,6 @@ const applyUpdateResult = (result) => (prevState) => ({
 });
 
 const getFileHistoryUrl = (repo_id, path, page=1, per_page=PER_PAGE) => {
-  let filePath = encodeURIComponent(window.app.pageOptions.filePath);
   return `${siteRoot}api/v2.1/repos/${repoID}/file/new_history/?path=${filePath}&page=${page}&per_page=${per_page}`;
 };
 
@@ -95,31 +95,61 @@ const Tip = () => (
   <p className="tip">Tip: a new version will be generated after each modification, and you can restore the file to a previous version.</p>
 );
 
+class TableRow extends React.Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      isSelected: false,
+    };
+  }
+
+  mouseEnter = () => {
+    this.setState( {isSelected: true} );
+  }
+
+  mouseLeave = () => {
+    this.setState( {isSelected: false} );
+  }
+
+  render() {
+    const { item, idx } = this.props;
+    const { isSelected } = this.state;
+    return (
+      <tr onMouseEnter={this.mouseEnter} onMouseLeave={this.mouseLeave}
+        className={isSelected ? 'hl' : ''}>
+        <td className="time"><span title={item.ctime}><Moment locale={lang} fromNow>{item.ctime}</Moment></span> {idx === 0 && '(current version)'}</td>
+        <td><img src={item.creator_avatar_url} width="16" height="16" className="avatar" /> <a href={getUrl({name: 'user_profile', username: item.creator_email})} className="vam">{item.creator_name}</a></td>
+        <td>{filesize(item.size, {base: 10})}</td>
+
+        { isSelected ?
+          <td>
+            {idx !== 0 && <a href="#" className="op" target="_blank">Restore</a>}
+            <a href={getUrl({name: 'download_historic_file', repoID: repoID, objID: item.rev_file_id, filePath: filePath})} className="op" target="_blank">Download</a>
+            <a href={getUrl({name: 'view_historic_file', repoID: repoID, commitID: item.commit_id, objID: item.rev_file_id, filePath: filePath})} className="op" target="_blank">View</a>
+            <a href={getUrl({name: 'diff_historic_file', repoID: repoID, commitID: item.commit_id, filePath: filePath})} className="op" target="_blank">Diff</a>
+          </td> :
+          <td></td>
+        }
+      </tr>
+    );
+  }
+}
+
 const Table = ({ data }) => (
   <table className="commit-list">
     <thead>
       <tr>
         <th width="25%">Time</th>
         <th width="25%">Modifer</th>
-        <th widht="20%">Size</th>
-        <th widht="30%">Operation</th>
+        <th width="20%">Size</th>
+        <th width="30%">Operation</th>
       </tr>
     </thead>
 
     <tbody>
       {data.map(
-        item =>
-          <tr key={item.commit_id}>
-            <td className="time"><span title={item.ctime}><Moment locale={lang} fromNow>{item.ctime}</Moment></span></td>
-            <td><img src={item.creator_avatar_url} width="16" height="16" className="avatar" /> <a href={getUrl({name: 'user_profile', username: item.creator_email})} className="vam">{item.creator_name}</a></td>
-            <td>{filesize(item.size, {base: 10})}</td>
-            <td>
-              <a href="#">Restore</a>
-              <a href="#">Download</a>
-              <a href="#">View</a>
-              <a href="#">Diff</a>
-            </td>
-          </tr>
+        (item, idx) => <TableRow key={item.commit_id} item={item} idx={idx} />
       )}
     </tbody>
   </table>
@@ -129,13 +159,12 @@ const withBreadcrumb = (Component) => (props) =>
   <div>
     <div className="commit-list-topbar ovhd">
       <p className="path fleft">Current Path:
-      <a href={getUrl({name: 'common_lib', repoID: repoID, path: '/'})}>{window.app.pageOptions.repoName}</a>
+        <a href={getUrl({name: 'common_lib', repoID: repoID, path: '/'})}>{window.app.pageOptions.repoName}</a>
         {window.app.pageOptions.filePath}
-</p>
+      </p>
     </div>
 
     <Component {...props} />
-
   </div>;
 
 const withLoadMore = (conditionFn) => (Component) => (props) =>
