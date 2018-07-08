@@ -3,27 +3,28 @@ import { gettext as _, siteRoot, lang, getUrl } from '../globals';
 import Moment from 'react-moment';
 import filesize from 'filesize';
 import { compose } from 'recompose';
+import PropTypes from 'prop-types';
 
-const PER_PAGE = 1;
-const repoID = window.app.pageOptions.repoID;
-const filePath = encodeURIComponent(window.app.pageOptions.filePath);
+const PER_PAGE = 25;
+const REPO_ID = window.app.pageOptions.repoID;
+const FILE_PATH = window.app.pageOptions.filePath;
 
 const applySetResult = (result) => (prevState) => ({
   data: result.data,
   page: result.page,
   isLoading: false,
-  hasMore: result.data.length === PER_PAGE,
+  hasMore: result.data && result.data.length === PER_PAGE,
 });
 
 const applyUpdateResult = (result) => (prevState) => ({
   data: [...prevState.data, ...result.data],
   page: result.page,
   isLoading: false,
-  hasMore: result.data.length === PER_PAGE,
+  hasMore: result.data && result.data.length === PER_PAGE,
 });
 
 const getFileHistoryUrl = (repo_id, path, page=1, per_page=PER_PAGE) => {
-  return `${siteRoot}api/v2.1/repos/${repoID}/file/new_history/?path=${filePath}&page=${page}&per_page=${per_page}`;
+  return `${siteRoot}api/v2.1/repos/${repo_id}/file/new_history/?path=${path}&page=${page}&per_page=${per_page}`;
 };
 
 class FileHistory extends React.Component {
@@ -44,22 +45,30 @@ class FileHistory extends React.Component {
       {credentials: 'same-origin'})
       .then(response => response.json())
       .then(result => this.onSetResult(result, page))
-      .catch(error => console.error('Fetch Error =\n', error));
+      .catch(error => this.onHandleErrors(error));
   }
 
   onSetResult = (result, page) => {
-    page === 1
+    if (result.error_msg) {
+      throw new Error(result.error_msg);
+    }
+    
+    return page === 1
       ? this.setState(applySetResult(result))
       : this.setState(applyUpdateResult(result));
   }
 
+  onHandleErrors = (error) => {
+    alert(error);
+    return;
+  }
 
   componentDidMount() {
-    this.fetchData('', '', 1, PER_PAGE);
+    this.fetchData(REPO_ID, FILE_PATH, 1, PER_PAGE);
   }
 
   onPaginatedGet = (e) =>
-    this.fetchData('', '', this.state.page + 1, PER_PAGE)
+    this.fetchData(REPO_ID, FILE_PATH, this.state.page + 1, PER_PAGE)
 
   render() {
     return (
@@ -68,7 +77,11 @@ class FileHistory extends React.Component {
         <BackNav />
         <Tip />
 
-        <TableWithBreadcrumbAndLoadMore
+        <Breadcrumb repoID={REPO_ID}
+                    repoName={window.app.pageOptions.repoName}
+                    filePath={FILE_PATH} />
+
+        <TableWithLoadMore
           data={this.state.data}
           onPaginatedGet={this.onPaginatedGet}
           isLoading={this.state.isLoading}
@@ -86,7 +99,7 @@ const Header = () => (
 );
 
 const BackNav = () => (
-  <a href="#" className="go-back" title="Back">
+  <a href="javascript:window.history.back()" className="go-back" title="Back">
     <span className="icon-chevron-left"></span>
   </a>
 );
@@ -119,15 +132,15 @@ class TableRow extends React.Component {
       <tr onMouseEnter={this.mouseEnter} onMouseLeave={this.mouseLeave}
         className={isSelected ? 'hl' : ''}>
         <td className="time"><span title={item.ctime}><Moment locale={lang} fromNow>{item.ctime}</Moment></span> {idx === 0 && '(current version)'}</td>
-        <td><img src={item.creator_avatar_url} width="16" height="16" className="avatar" /> <a href={getUrl({name: 'user_profile', username: item.creator_email})} className="vam">{item.creator_name}</a></td>
+        <td><img src={item.creator_avatar_url} width="16" height="16" alt="" className="avatar" /> <a href={getUrl({name: 'user_profile', username: item.creator_email})} className="vam">{item.creator_name}</a></td>
         <td>{filesize(item.size, {base: 10})}</td>
 
         { isSelected ?
           <td>
             {idx !== 0 && <a href="#" className="op" target="_blank">Restore</a>}
-            <a href={getUrl({name: 'download_historic_file', repoID: repoID, objID: item.rev_file_id, filePath: filePath})} className="op" target="_blank">Download</a>
-            <a href={getUrl({name: 'view_historic_file', repoID: repoID, commitID: item.commit_id, objID: item.rev_file_id, filePath: filePath})} className="op" target="_blank">View</a>
-            <a href={getUrl({name: 'diff_historic_file', repoID: repoID, commitID: item.commit_id, filePath: filePath})} className="op" target="_blank">Diff</a>
+            <a href={getUrl({name: 'download_historic_file', repoID: REPO_ID, objID: item.rev_file_id, filePath: FILE_PATH})} className="op" target="_blank">Download</a>
+            <a href={getUrl({name: 'view_historic_file', repoID: REPO_ID, commitID: item.commit_id, objID: item.rev_file_id, filePath: FILE_PATH})} className="op" target="_blank">View</a>
+            <a href={getUrl({name: 'diff_historic_file', repoID: REPO_ID, commitID: item.commit_id, filePath: FILE_PATH})} className="op" target="_blank">Diff</a>
           </td> :
           <td></td>
         }
@@ -135,6 +148,18 @@ class TableRow extends React.Component {
     );
   }
 }
+
+TableRow.propTypes = {
+  idx: PropTypes.number.isRequired,
+  item: PropTypes.shape({
+    ctime: PropTypes.string.isRequired,
+    commit_id: PropTypes.string.isRequired,
+    rev_file_id: PropTypes.string.isRequired,
+    size: PropTypes.number.isRequired,
+    creator_name: PropTypes.string.isRequired,
+    creator_avatar_url: PropTypes.string.isRequired,
+  })
+};
 
 const Table = ({ data }) => (
   <table className="commit-list">
@@ -154,18 +179,39 @@ const Table = ({ data }) => (
     </tbody>
   </table>
 );
+Table.propTypes = {
+  data: PropTypes.array.isRequired
+};
 
-const withBreadcrumb = (Component) => (props) =>
-  <div>
-    <div className="commit-list-topbar ovhd">
-      <p className="path fleft">Current Path:
-        <a href={getUrl({name: 'common_lib', repoID: repoID, path: '/'})}>{window.app.pageOptions.repoName}</a>
-        {window.app.pageOptions.filePath}
-      </p>
+const Breadcrumb = ({ repoID, repoName, filePath }) => {
+  let [, ...rest] = filePath.split('/');
+
+  return (
+    <div>
+      <div className="commit-list-topbar ovhd">
+        <p className="path fleft">Current Path:
+          <a href={getUrl({name: 'common_lib', repoID: repoID, path: '/'})}>{repoName}</a>
+
+          {
+            rest.map((item, idx) => {
+              let p = '/' + rest.slice(0, idx+1).join('/');
+              let href = idx + 1 === rest.length ?
+                getUrl({name: 'view_lib_file', repoID: repoID, filePath: p}) :
+                getUrl({name: 'common_lib', repoID: repoID, path: p});
+
+              return <span key={idx}> / <a href={href}>{item}</a></span>;
+            })
+          }
+        </p>
+      </div>
     </div>
-
-    <Component {...props} />
-  </div>;
+  );
+};
+Breadcrumb.propTypes = {
+  repoID: PropTypes.string.isRequired,
+  repoName: PropTypes.string.isRequired,
+  filePath: PropTypes.string.isRequired,
+};
 
 const withLoadMore = (conditionFn) => (Component) => (props) =>
   <div>
@@ -187,8 +233,7 @@ const withLoadMore = (conditionFn) => (Component) => (props) =>
 const loadMoreCondition = props =>
   props.page !== null && props.hasMore;
 
-const TableWithBreadcrumbAndLoadMore = compose(
-  withBreadcrumb,
+const TableWithLoadMore = compose(
   withLoadMore(loadMoreCondition),
 )(Table);
 
