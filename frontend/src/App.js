@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import SeafileEditor from './lib/seafile-editor';
-import MarkdownViewer from './lib/markdown-viewer';
+import SeafileEditor from '@seafile/seafile-editor';
 import 'whatwg-fetch';
 
 let repoID = window.app.pageOptions.repoID;
