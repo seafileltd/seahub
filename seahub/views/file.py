@@ -379,6 +379,9 @@ def view_lib_file(request, repo_id, path):
     if not permission:
 
         converted_repo_path = seafile_api.convert_repo_path(repo_id, path, username)
+        if not converted_repo_path:
+            return render_permission_error(request, _(u'Unable to view file'))
+
         converted_repo_path = json.loads(converted_repo_path)
 
         repo_id = converted_repo_path['repo_id']

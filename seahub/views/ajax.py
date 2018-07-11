@@ -226,6 +226,11 @@ def list_lib_dir(request, repo_id):
     if not user_perm:
 
         converted_repo_path = seafile_api.convert_repo_path(repo_id, path, username)
+        if not converted_repo_path:
+            err_msg = _(u'Permission denied.')
+            return HttpResponse(json.dumps({'error': err_msg}),
+                                status=403, content_type=content_type)
+
         converted_repo_path = json.loads(converted_repo_path)
 
         repo_id = converted_repo_path['repo_id']
