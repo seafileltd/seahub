@@ -82,11 +82,6 @@ class GroupMembers(APIView):
             return api_error(status.HTTP_403_FORBIDDEN, error_msg)
 
         email = request.data.get('email', None)
-        try:
-            User.objects.get(email=email)
-        except User.DoesNotExist:
-            error_msg = 'User %s not found.' % email
-            return api_error(status.HTTP_404_NOT_FOUND, error_msg)
 
         try:
             if is_group_member(group_id, email):
