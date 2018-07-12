@@ -100,21 +100,16 @@ def edit_profile(request):
         resp_dict['default_device'] = default_device(request.user)
         resp_dict['backup_tokens'] = backup_tokens
 
-    from social_django.models import UserSocialAuth
+    # from social_django.models import UserSocialAuth
+    # enabled_social_auth = [x for x in UserSocialAuth.objects.filter(
+    #     username=request.user.username)]
 
-    enabled_social_auth = [x for x in UserSocialAuth.objects.filter(
-        username=request.user.username)]
-    for x in enabled_social_auth:
-        if x.provider == 'weixin-work':
-            x.provider_name = _('WeChat Work')
-    resp_dict['enabled_social_auth'] = enabled_social_auth
+    # weixin_auth = None
+    # for x in enabled_social_auth:
+    #     if x.provider == 'weixin':
+    #         weixin_auth = x
 
-    available_social_auth = []
-    for x in settings.SOCIAL_AUTH_METHODS:
-        if x[0] in [y.provider for y in enabled_social_auth]:
-            continue
-        available_social_auth.append(x)
-    resp_dict['available_social_auth'] = available_social_auth
+    # resp_dict['weixin_auth'] = weixin_auth
 
     return render(request, 'profile/set_profile.html', resp_dict)
 

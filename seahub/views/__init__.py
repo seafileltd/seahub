@@ -1170,3 +1170,9 @@ def choose_register(request):
     return render(request, 'choose_register.html', {
         'login_bg_image_path': login_bg_image_path
     })
+
+
+def social_error(request):
+    return render(request, 'error.html', {
+        'error_msg': 'Failed to login, try again later.'
+    })

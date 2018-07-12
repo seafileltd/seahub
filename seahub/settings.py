@@ -124,6 +124,7 @@ MIDDLEWARE_CLASSES = (
     'termsandconditions.middleware.TermsAndConditionsRedirectMiddleware',
     'seahub.two_factor.middleware.OTPMiddleware',
     'seahub.trusted_ip.middleware.LimitIpMiddleware',
+    'social_django.middleware.SocialAuthExceptionMiddleware',
 )
 
 
@@ -263,6 +264,7 @@ CONSTANCE_BACKEND = 'constance.backends.database.DatabaseBackend'
 CONSTANCE_DATABASE_CACHE_BACKEND = 'default'
 
 AUTHENTICATION_BACKENDS = (
+    'social_core.backends.weixin.WeixinOAuth2',
     'seahub.social_core.backends.weixin_enterprise.WeixinWorkOAuth2',
     'seahub.social_core.backends.weixin_enterprise.WeixinWorkOAuth2APP',
 
@@ -273,15 +275,11 @@ AUTHENTICATION_BACKENDS = (
 SOCIAL_AUTH_URL_NAMESPACE = 'social'
 SOCIAL_AUTH_VERIFY_SSL = True
 SOCIAL_AUTH_METHODS = (
-    ('weixin-work', gettext_noop('WeChat Work')),
-    # ('weixin-work-app', 'WeChat Work App'),
+    ('weixin', gettext_noop('WeChat')),
 )
 
-# SOCIAL_AUTH_GITHUB_KEY = ''
-# SOCIAL_AUTH_GITHUB_SECRET = ''
-
-# SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = ''
-# SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = ''
+SOCIAL_AUTH_WEIXIN_KEY = ''
+SOCIAL_AUTH_WEIXIN_SECRET = ''
 
 SOCIAL_AUTH_WEIXIN_WORK_AGENTID = ''
 SOCIAL_AUTH_WEIXIN_WORK_KEY = ''
