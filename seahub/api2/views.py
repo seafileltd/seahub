@@ -640,7 +640,7 @@ class Repos(APIView):
                 repo = {
                     "type": "repo",
                     "id": r.id,
-                    "owner": email,
+                    "owner": email2nickname(email),
                     "name": r.name,
                     "mtime": r.last_modify,
                     "modifier_email": r.last_modifier,
@@ -693,7 +693,7 @@ class Repos(APIView):
                 repo = {
                     "type": "srepo",
                     "id": r.repo_id,
-                    "owner": r.user,
+                    "owner": email2nickname(r.user),
                     "name": r.repo_name,
                     "owner_nickname": nickname_dict.get(r.user, ''),
                     "owner_name": nickname_dict.get(r.user, ''),
