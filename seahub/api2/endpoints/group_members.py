@@ -22,6 +22,7 @@ from seahub.base.accounts import User
 from seahub.group.signals import add_user_to_group
 from seahub.group.utils import is_group_member, is_group_admin, \
     is_group_owner, is_group_admin_or_owner, get_group_member_info
+from seahub.base.templatetags.seahub_tags import email2nickname
 
 from .utils import api_check_group
 
@@ -269,19 +270,11 @@ class GroupMembersBulk(APIView):
             org_id = request.user.org.org_id
 
         for email in emails_list:
-            try:
-                User.objects.get(email=email)
-            except User.DoesNotExist:
-                result['failed'].append({
-                    'email': email,
-                    'error_msg': 'User %s not found.' % email
-                    })
-                continue
 
             if is_group_member(group_id, email, in_structure=False):
                 result['failed'].append({
-                    'email': email,
-                    'error_msg': _(u'User %s is already a group member.') % email
+                    'email': email2nickname(email),
+                    'error_msg': _(u'User %s is already a group member.') % email2nickname(email)
                     })
                 continue
 
@@ -289,8 +282,8 @@ class GroupMembersBulk(APIView):
             if org_id and not \
                 seaserv.ccnet_threaded_rpc.org_user_exists(org_id, email):
                 result['failed'].append({
-                    'email': email,
-                    'error_msg': _(u'User %s not found in organization.') % email
+                    'email': email2nickname(email),
+                    'error_msg': _(u'User %s not found in organization.') % email2nickname(email)
                     })
                 continue
 
@@ -306,7 +299,7 @@ class GroupMembersBulk(APIView):
             except SearpcError as e:
                 logger.error(e)
                 result['failed'].append({
-                    'email': email,
+                    'email': email2nickname(email),
                     'error_msg': 'Internal Server Error'
                     })
 
