@@ -1,0 +1,22 @@
+{% load seahub_tags %}
+watermark.load({
+    watermark_txt: "Alifile   " + "{{request.user.username|email2nickname}}",
+    watermark_id: 'watermark-container',
+
+    watermark_x:20,
+    watermark_y:10,
+    watermark_rows:0,
+    watermark_cols:0,
+    watermark_x_space:5,
+    watermark_y_space:5,
+
+    watermark_font:'Arial',
+
+    watermark_color:'black',
+    watermark_fontsize:'15px',
+
+    watermark_alpha:0.15,
+    watermark_width:250,
+    watermark_height:80,
+    watermark_angle:20
+});
