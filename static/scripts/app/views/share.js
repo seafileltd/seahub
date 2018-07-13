@@ -717,35 +717,36 @@ define([
             var groups = [];
 
             if (app.pageOptions.enable_share_to_all_groups) {
-                $.ajax({
-                    url: Common.getUrl({
-                        name: 'shareable_groups'
-                    }),
-                    type: 'GET',
-                    dataType: 'json',
-                    cache: false,
-                    success: function(data){
-                        for (var i = 0, len = data.length; i < len; i++) {
-                            groups.push({
-                                'id': data[i].id,
-                                'name': data[i].name
-                            });
-                        }
-                        groups.sort(function(a, b) {
-                            return Common.compareTwoWord(a.name, b.name);
-                        });
-                    },
-                    error: function(xhr, textStatus, errorThrown) {
-                        // do nothing
-                    },
-                    complete: function() {
-                        options.callback(groups);
-                    }
-                });
+                var groups_url = 'shareable_groups';
             } else {
-                groups = app.pageOptions.joined_groups_exclude_address_book || [];
-                options.callback(groups);
+                var groups_url = 'groups';
             }
+
+            $.ajax({
+                url: Common.getUrl({
+                    name: groups_url
+                }),
+                type: 'GET',
+                dataType: 'json',
+                cache: false,
+                success: function(data){
+                    for (var i = 0, len = data.length; i < len; i++) {
+                        groups.push({
+                            'id': data[i].id,
+                            'name': data[i].name
+                        });
+                    }
+                    groups.sort(function(a, b) {
+                        return Common.compareTwoWord(a.name, b.name);
+                    });
+                },
+                error: function(xhr, textStatus, errorThrown) {
+                    // do nothing
+                },
+                complete: function() {
+                    options.callback(groups);
+                }
+            });
         },
 
         // for group owned repo
