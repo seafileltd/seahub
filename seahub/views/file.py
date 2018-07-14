@@ -456,7 +456,13 @@ def view_lib_file(request, repo_id, path):
         is_locked = False
         locked_by_me = False
 
+    logger.error('is_locked, locked_by_me')
+    logger.error(is_locked)
+    logger.error(locked_by_me)
+
     locked_by_online_office = if_locked_by_online_office(repo_id, path)
+    logger.error('locked_by_online_office')
+    logger.error(locked_by_online_office)
 
     if is_pro_version() and permission == 'rw':
         can_lock_unlock_file = True
@@ -617,10 +623,13 @@ def view_lib_file(request, repo_id, path):
                 return render(request, 'view_file_base.html', return_dict)
 
             if is_pro_version() and action_name == 'edit':
-                if not is_locked:
-                    seafile_api.lock_file(repo_id, path, ONLINE_OFFICE_LOCK_OWNER, 0)
-                elif locked_by_online_office:
-                    seafile_api.refresh_file_lock(repo_id, path)
+                try:
+                    if not is_locked:
+                        seafile_api.lock_file(repo_id, path, ONLINE_OFFICE_LOCK_OWNER, 0)
+                    elif locked_by_online_office:
+                        seafile_api.refresh_file_lock(repo_id, path)
+                except Exception as e:
+                    logger.error(e)
 
             wopi_dict['doc_title'] = filename
             wopi_dict['repo_id'] = repo_id

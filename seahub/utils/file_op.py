@@ -31,6 +31,9 @@ def check_file_lock(repo_id, file_path, username):
     return_value = seafile_api.check_file_lock(repo_id,
             file_path.lstrip('/'), username)
 
+    logger.error('return_value = seafile_api.check_file_lock(repo_id')
+    logger.error(return_value)
+
     if return_value == 0:
         return (False, False)
     elif return_value == 1:
@@ -45,6 +48,8 @@ def if_locked_by_online_office(repo_id, path):
     locked_by_online_office = False
     if is_pro_version():
         lock_info = seafile_api.get_lock_info(repo_id, path)
+        logger.error('lock_info')
+        logger.error(lock_info.user)
         if lock_info and lock_info.user == ONLINE_OFFICE_LOCK_OWNER:
             locked_by_online_office = True
 
