@@ -1,7 +1,6 @@
 import React from 'react';
 import SeafileEditor from '@seafile/seafile-editor';
 import 'whatwg-fetch';
-import { SeafileAPI } from './seafile-js'
 
 
 let repoID = window.app.pageOptions.repoID;
@@ -19,7 +18,6 @@ const userInfo = window.app.userInfo;
 
 const updateUrl = `${siteRoot}api2/repos/${repoID}/update-link/?p=${dirPath}`;
 const uploadUrl = `${siteRoot}api2/repos/${repoID}/upload-link/?p=${dirPath}&from=web`;
-let seafileAPI = new SeafileAPI();
 function updateFile(uploadLink, filePath, fileName, content) {
   var formData = new FormData();
   formData.append("target_file", filePath);
