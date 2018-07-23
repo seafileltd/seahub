@@ -1,6 +1,7 @@
 import React from 'react';
 import SeafileEditor from '@seafile/seafile-editor';
 import 'whatwg-fetch';
+import cookie from 'react-cookies';
 
 let repoID = window.app.pageOptions.repoID;
 let filePath = window.app.pageOptions.filePath;
@@ -17,6 +18,7 @@ const userInfo = window.app.userInfo;
 
 const updateUrl = `${siteRoot}api2/repos/${repoID}/update-link/?p=${dirPath}`;
 const uploadUrl = `${siteRoot}api2/repos/${repoID}/upload-link/?p=${dirPath}&from=web`;
+const starfileUrl = `${siteRoot}api2/starredfiles/`;
 
 function updateFile(uploadLink, filePath, fileName, content) {
   var formData = new FormData();
@@ -55,6 +57,26 @@ class EditorUtilities {
 
   getParentDectionaryUrl() {
     return this.serviceUrl + "/#common/lib/" + this.repoID + "/";
+  }
+
+  starFile() {
+    let data = new FormData();
+    data.append('repo_id', this.repoID);
+    data.append('p', this.filePath);
+    return (
+      fetch(starfileUrl, {
+        credentials: 'same-origin',
+        method: 'POST',
+        headers: {
+          "X-CSRFToken": cookie.load('csrftoken'),
+        },
+        body: data,
+      })
+        .then(res => {
+          console.log(res);
+          alert('ok');
+        })
+    );
   }
   
   _getImageURL(fileName) {
